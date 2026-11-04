@@ -1,0 +1,55 @@
+# JavaScript dependencies and package-manager caches
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.pnp.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Generated frontend assets and the Go embed staging directory
+/server/frontend/dist/
+/server/frontend/.vite/
+/server/backend/internal/web/dist/
+
+# Compiled server binaries
+/server/backend/server
+/server/server
+
+# Endpoint build output (keep C, headers, assembly, linker scripts and Makefiles)
+/endpoint/**/*.o
+/endpoint/**/*.obj
+/endpoint/**/*.exe
+/endpoint/**/*.dll
+/endpoint/**/*.so
+/endpoint/**/*.a
+/endpoint/**/*.lib
+/endpoint/**/*.bin
+/endpoint/**/build/
+/endpoint/**/dist/
+
+# Test, inspection and language caches
+coverage/
+.taste-skill/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+!.env.sample
+.aws/
+
+# Editor / OS temporary files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Sources, Markdown, manifests, lockfiles, .agents/ and skills remain trackable.

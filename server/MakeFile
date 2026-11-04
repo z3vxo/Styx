@@ -1,0 +1,26 @@
+# Run from server/: make -f MakeFile
+.DEFAULT_GOAL := all
+ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+FRONTEND := $(ROOT)frontend
+BACKEND := $(ROOT)backend
+NPM ?= npm
+GO ?= go
+
+.PHONY: all build frontend embed test run
+all: build
+
+build: embed
+	cd "$(BACKEND)" && $(GO) build -trimpath -o server ./cmd
+
+frontend:
+	cd "$(FRONTEND)" && $(NPM) ci --no-audit --no-fund
+	cd "$(FRONTEND)" && $(NPM) run build
+
+embed: frontend
+	node "$(FRONTEND)/scripts/stage-frontend.mjs"
+
+test: embed
+	cd "$(BACKEND)" && $(GO) test ./...
+
+run: build
+	cd "$(BACKEND)" && ./server run
