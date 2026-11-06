@@ -5,22 +5,26 @@ import (
 	"net/http"
 	campaigns "styx/internal/api/Campaigns"
 	authapi "styx/internal/api/auth"
+	clients "styx/internal/api/clients"
 	files "styx/internal/api/files"
-	"styx/internal/auth"
+	authmgr "styx/internal/auth"
 	"styx/internal/cfg"
 	"styx/internal/db"
 	"styx/internal/web"
+	"styx/internal/ws"
 
 	"github.com/go-chi/chi"
 )
 
 type Server struct {
 	DB          *db.DB
-	Auth        *auth.Auth
+	Auth        *authmgr.Auth
 	AuthAPI     *authapi.API
 	CampaignAPI *campaigns.API
 	UploadsAPI  *files.API
+	ClientsAPI  *clients.API
 	Cfg         *cfg.Cfg
+	WSHandler   *ws.WS
 }
 
 func New() (*Server, error) {
@@ -33,15 +37,17 @@ func New() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	a := auth.New(c)
+	a := authmgr.New(c)
 
 	return &Server{
 		DB:          db,
 		Cfg:         c,
 		Auth:        a,
 		AuthAPI:     authapi.New(db, a),
-		CampaignAPI: campaigns.New(db),
-		UploadsAPI:  files.New(db),
+		CampaignAPI: campaigns.New(db, a),
+		UploadsAPI:  files.New(db, a),
+		ClientsAPI:  clients.New(db, a),
+		WSHandler:   ws.New(db, a),
 	}, nil
 }
 
@@ -52,6 +58,8 @@ func (s *Server) Run() error {
 		r.Mount("/auth", s.AuthAPI.Routes())
 		r.Mount("/campaigns", s.CampaignAPI.Routes())
 		r.Mount("/uploads", s.UploadsAPI.Routes())
+		r.Mount("/clients", s.ClientsAPI.Routes())
+		r.Get("/ws/connect/{id}", s.WSHandler.HandleWS)
 	})
 
 	r.Handle("/*", web.Handler())

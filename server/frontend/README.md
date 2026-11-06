@@ -1,8 +1,12 @@
 # Styx frontend
 
-React and Vite. Desktop is the supported layout target. The login page currently
-shows a confirmation after authentication; session persistence and dashboard
-navigation will be added with the dashboard.
+React and Vite. Desktop is the supported layout target. Login saves access and
+refresh tokens in local storage, then opens `/dashboard`. The dashboard lists
+clients for the selected campaign. Double-click a client row to open a resizable
+shell below the list. Command execution is not connected to a backend endpoint yet.
+Campaigns can be created from the New button beside the dashboard selector.
+The Campaigns tab lists each campaign's client and file totals and provides a confirmed delete action.
+The Files tab lists uploads for the selected campaign, uploads local files through the two-step API, and confirms deletions. Protected requests refresh an expired access token and retry once.
 
 ## Development
 

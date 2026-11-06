@@ -95,3 +95,102 @@ func TestSetupMigratesExistingSignature(t *testing.T) {
 		t.Fatalf("salt = %q, want %q", salt, info.Salt)
 	}
 }
+
+func TestListCampaignsCountsClientsAndFiles(t *testing.T) {
+	conn, err := Setup(filepath.Join(t.TempDir(), "styx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	for _, id := range []string{"campaign-a", "campaign-b", "campaign-empty"} {
+		if _, err := conn.Exec(`INSERT INTO campaigns (Name, uuid) VALUES (?, ?)`, id, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i, campaignID := range []string{"campaign-a", "campaign-a", "campaign-b"} {
+		if _, err := conn.Exec(`INSERT INTO clients (ClientName, ClientID, CampaignUUID) VALUES (?, ?, ?)`, "client", i+1, campaignID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, upload := range []struct{ id, campaignID string }{
+		{"file-a", "campaign-a"},
+		{"file-b", "campaign-b"},
+		{"file-c", "campaign-b"},
+	} {
+		if _, err := conn.Exec(`INSERT INTO user_uploads (FileUUID, FileName, FileSize, HasReloc, CampaignUUID) VALUES (?, ?, ?, ?, ?)`,
+			upload.id, "test.txt", 4, 1, upload.campaignID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := (&DB{conn: conn}).ListCampaigns()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Total != 3 {
+		t.Fatalf("campaign total = %d, want 3", result.Total)
+	}
+	want := map[string]struct{ clients, files int }{
+		"campaign-a":     {2, 1},
+		"campaign-b":     {1, 2},
+		"campaign-empty": {0, 0},
+	}
+	for _, campaign := range result.Entry {
+		counts, ok := want[campaign.Id]
+		if !ok {
+			t.Errorf("unexpected campaign %s", campaign.Id)
+			continue
+		}
+		if campaign.TotalClients != counts.clients || campaign.TotalFiles != counts.files {
+			t.Errorf("%s totals = clients %d, files %d; want clients %d, files %d",
+				campaign.Id, campaign.TotalClients, campaign.TotalFiles, counts.clients, counts.files)
+		}
+		delete(want, campaign.Id)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing campaigns: %v", want)
+	}
+}
+
+func TestDeleteCampaignRemovesRelatedRecords(t *testing.T) {
+	conn, err := Setup(filepath.Join(t.TempDir(), "styx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	for _, id := range []string{"campaign-a", "campaign-b"} {
+		if _, err := conn.Exec(`INSERT INTO campaigns (Name, uuid) VALUES (?, ?)`, id, id); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conn.Exec(`INSERT INTO clients (ClientName, ClientID, CampaignUUID) VALUES (?, ?, ?)`, "client", 1, id); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conn.Exec(`INSERT INTO user_uploads (FileUUID, FileName, FileSize, HasReloc, CampaignUUID) VALUES (?, ?, ?, ?, ?)`, id+"-file", "file.txt", 4, 1, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fileIDs, err := (&DB{conn: conn}).DeleteCampaign("campaign-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fileIDs) != 1 || fileIDs[0] != "campaign-a-file" {
+		t.Fatalf("deleted file IDs = %v", fileIDs)
+	}
+	for _, table := range []string{"campaigns", "clients", "user_uploads"} {
+		for _, tc := range []struct {
+			id   string
+			want int
+		}{{"campaign-a", 0}, {"campaign-b", 1}} {
+			column := "CampaignUUID"
+			if table == "campaigns" {
+				column = "uuid"
+			}
+			var count int
+			if err := conn.QueryRow(`SELECT COUNT(*) FROM `+table+` WHERE `+column+` = ?`, tc.id).Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			if count != tc.want {
+				t.Errorf("%s rows for %s = %d, want %d", table, tc.id, count, tc.want)
+			}
+		}
+	}
+}

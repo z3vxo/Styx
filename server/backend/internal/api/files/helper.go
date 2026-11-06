@@ -24,10 +24,13 @@ func (a *API) Delete(id string) error {
 	defer a.mu.Unlock()
 	entry, ok := a.uploadsMap[id]
 	if !ok {
-		return fmt.Errorf("not found")
+		return nil
 	}
 	f := entry.Handle
 	delete(a.uploadsMap, id)
+	if f == nil {
+		return nil
+	}
 	return f.Close()
 }
 
@@ -74,22 +77,21 @@ func (a *API) PrepeareDisk(info db.FileInfo) (string, error) {
 }
 
 func (a *API) DeleteLocal(id string) error {
+	if _, err := uuid.Parse(id); err != nil {
+		return fmt.Errorf("invalid file id")
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 
-	f, ok := a.uploadsMap[id]
-	if ok {
-		f.Handle.Close()
-		a.Delete(id)
-	}
-
-	path := filepath.Join(home, ".local", "share", "styx", "user-files", id)
-
-	if err := a.db.DeleteFile(id); err != nil {
+	if err := a.Delete(id); err != nil {
 		return err
 	}
 
-	return os.RemoveAll(path)
+	path := filepath.Join(home, ".local", "share", "styx", "user-files", id)
+	if err := os.RemoveAll(path); err != nil {
+		return err
+	}
+	return a.db.DeleteFile(id)
 }

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"styx/internal/auth"
+	authmgr "styx/internal/auth"
 	"styx/internal/db"
 
 	"github.com/go-chi/chi"
@@ -13,10 +13,10 @@ import (
 
 type API struct {
 	db   *db.DB
-	auth *auth.Auth
+	auth *authmgr.Auth
 }
 
-func New(database *db.DB, authService *auth.Auth) *API {
+func New(database *db.DB, authService *authmgr.Auth) *API {
 	return &API{db: database, auth: authService}
 }
 
@@ -59,6 +59,39 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type ResfreshReq struct {
+	RefreshToken string `json:"token"`
+}
+
 func (a *API) refresh(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
+	w.Header().Set("Content-Type", "application/json")
+	var req ResfreshReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	if req.RefreshToken == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "refresh token is required"})
+		return
+	}
+
+	claims, err := a.auth.VerifyRefresh(req.RefreshToken)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	tokens, err := a.auth.NewJwtPair(claims.Usename)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tokens)
+
 }

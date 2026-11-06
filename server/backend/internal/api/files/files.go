@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	authmgr "styx/internal/auth"
 	"styx/internal/db"
 	"sync"
 
@@ -12,16 +13,18 @@ import (
 
 type API struct {
 	db         *db.DB
+	auth       *authmgr.Auth
 	uploadsMap map[string]db.FileInfo
 	mu         sync.RWMutex
 }
 
-func New(database *db.DB) *API {
-	return &API{db: database, uploadsMap: make(map[string]db.FileInfo)}
+func New(database *db.DB, a *authmgr.Auth) *API {
+	return &API{db: database, uploadsMap: make(map[string]db.FileInfo), auth: a}
 }
 
 func (a *API) Routes() chi.Router {
 	r := chi.NewRouter()
+	r.Use(a.auth.AuthWare())
 	r.Post("/start", a.StartUpload)
 	r.Put("/begin/{id}", a.BeginUpload)
 	r.Delete("/delete/{id}", a.DeleteUpload)
@@ -110,6 +113,12 @@ func (a *API) BeginUpload(w http.ResponseWriter, r *http.Request) {
 	if err := a.db.InsertFile(f); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	if err := a.Delete(id); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed closing upload"})
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

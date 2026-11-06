@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { authFetch } from './authFetch.js';
 
 const CampaignContext = createContext(null);
 
@@ -14,17 +15,9 @@ export function CampaignProvider({ children }) {
     async function load() {
       setStatus('loading');
       try {
-        const access = localStorage.getItem('access');
-        if (!access) { window.location.replace('/'); return; }
-        const response = await fetch('/rest/campaigns/list', {
-          headers: { Authorization: `Bearer ${access}` },
+        const response = await authFetch('/rest/campaigns/list', {
           signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
         });
-        if (response.status === 401) {
-          for (const key of ['access', 'refresh', 'campaignsResponse', 'currentCampaignId']) localStorage.removeItem(key);
-          window.location.replace('/');
-          return;
-        }
         if (!response.ok) throw new Error('Campaign request failed');
         const data = await response.json();
         if (!data || (data.campaigns !== null && !Array.isArray(data.campaigns))) throw new Error('Invalid campaign list');
