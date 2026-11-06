@@ -26,21 +26,20 @@ func (a *API) Routes() chi.Router {
 }
 
 func (a *API) NewTask(w http.ResponseWriter, r *http.Request) {
-	var req db.NewTask
+	var req db.NewTaskReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
-	if err := a.db.InsertTask(req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
+	taskID, err := a.db.InsertTask(req)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "OK"})
+	json.NewEncoder(w).Encode(map[string]int32{"task_id": taskID})
 }

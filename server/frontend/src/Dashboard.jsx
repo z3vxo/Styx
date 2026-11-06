@@ -111,25 +111,118 @@ function UsersPanel({ onSelectClient, selectedClientId }) {
   </section>;
 }
 
+function newSocketId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 function ShellPanel({ client, onClose }) {
+  const { currentCampaignId } = useCampaign();
   const [command, setCommand] = useState('');
   const [entries, setEntries] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
   const outputRef = useRef(null);
+  const socketRef = useRef(null);
+  const taskRequestsRef = useRef(new Set());
+  const tabIdRef = useRef(null);
+  if (!tabIdRef.current) tabIdRef.current = newSocketId();
+
+  useEffect(() => {
+    const url = new URL('/rest/ws/connect', window.location.href);
+    url.searchParams.set('client_id', String(client.client_id));
+    url.searchParams.set('tab_id', tabIdRef.current);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const controller = new AbortController();
+    let socket;
+    setConnectionStatus('connecting');
+
+    const onMessage = event => {
+      let message;
+      try { message = JSON.parse(event.data); } catch { return; }
+      if (message.metadata?.tab_id && message.metadata.tab_id !== tabIdRef.current) return;
+      if (message.event === 'task.Output') {
+        setEntries(previous => [...previous, { id: newSocketId(), command: 'Output', response: String(message.body?.output ?? message.body?.message ?? '') }]);
+        return;
+      }
+    };
+    const onClose = () => {
+      socketRef.current = null;
+      setConnectionStatus(status => status === 'error' ? status : 'closed');
+    };
+
+    async function connect() {
+      try {
+        const response = await authFetch('/rest/campaigns/list', {
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+        });
+        if (!response.ok) throw new Error('Could not authorize the connection');
+        if (controller.signal.aborted) return;
+        const access = localStorage.getItem('access');
+        if (!access) throw new Error('Session required');
+        socket = new WebSocket(url, ['styx', `styx.jwt.${access}`]);
+        socketRef.current = socket;
+        socket.onopen = () => setConnectionStatus('connected');
+        socket.onmessage = onMessage;
+        socket.onerror = () => setConnectionStatus('error');
+        socket.onclose = onClose;
+      } catch {
+        if (!controller.signal.aborted) setConnectionStatus('error');
+      }
+    }
+    connect();
+
+    return () => {
+      controller.abort();
+      for (const request of taskRequestsRef.current) request.abort();
+      taskRequestsRef.current.clear();
+      if (!socket) return;
+      socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null;
+      if (socketRef.current === socket) socketRef.current = null;
+      socket.close();
+    };
+  }, [client.client_id]);
+
   useEffect(() => {
     if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
   }, [entries]);
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     const value = command.trim();
     if (!value) return;
-    setEntries(previous => [...previous, { command: value, response: 'Command execution is not connected yet.' }]);
+    const [cmd, ...args] = value.split(/\s+/);
+    const entryId = newSocketId();
+    const controller = new AbortController();
+    taskRequestsRef.current.add(controller);
+    setEntries(previous => [...previous, { id: entryId, command: value, response: 'Creating task…' }]);
     setCommand('');
+    let result;
+    try {
+      const response = await authFetch('/rest/tasks/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd, args: args.map(arg => ({ type: 'string', value: arg })), client_id: client.client_id, campaign_id: currentCampaignId }),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Could not create task.');
+      if (!Number.isInteger(data?.task_id) || data.task_id <= 0) throw new Error('Invalid task response.');
+      result = `Task queued (ID ${data.task_id}).`;
+    } catch (error) {
+      result = error instanceof Error && error.name !== 'TimeoutError' && error.name !== 'AbortError'
+        ? error.message : 'Could not create task. Please try again.';
+    } finally {
+      taskRequestsRef.current.delete(controller);
+    }
+    if (!controller.signal.aborted) {
+      setEntries(previous => previous.map(entry => entry.id === entryId ? { ...entry, response: result } : entry));
+    }
   }
   return <section className="dashboard-panel shell-panel" aria-label="Shell">
-    <div className="shell-context"><span>{client.name || client.hostname || `Client ${client.client_id}`}</span><button type="button" onClick={onClose} aria-label="Close command panel">Close</button></div>
+    <div className="shell-context"><span>{client.name || client.hostname || `Client ${client.client_id}`}</span><span className="shell-connection" role="status">{connectionStatus === 'connecting' ? 'Connecting…' : connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'error' ? 'Connection failed' : 'Disconnected'}</span><button type="button" onClick={onClose} aria-label="Close command panel">Close</button></div>
     <div className="shell-output" ref={outputRef} role="log" aria-live="polite" aria-label="Shell output">
       {entries.length === 0 && <p className="shell-placeholder">Command output will appear here.</p>}
-      {entries.map((entry, index) => <div className="shell-entry" key={index}>
+      {entries.map(entry => <div className="shell-entry" key={entry.id}>
         <div><span className="shell-prompt" aria-hidden="true">$</span> {entry.command}</div>
         <p>{entry.response}</p>
       </div>)}

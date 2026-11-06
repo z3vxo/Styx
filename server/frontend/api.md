@@ -89,3 +89,32 @@ When empty, `files` may be `null`. Refresh this list after a successful upload o
 ### `DELETE /rest/uploads/delete/{id}`
 
 Use the file UUID, not the campaign ID. Success removes the stored file directory and database row, then returns HTTP 200 and `{"status":"OK"}`; deletion errors return 400. The current API does not expose a file-download endpoint.
+
+## WebSocket
+
+### `GET /rest/ws/connect?client_id={id}&tab_id={tabID}`
+
+The server upgrades this request after validating the numeric client ID, tab ID, and an access token sent as the `styx.jwt.<access>` WebSocket subprotocol. The browser also offers the `styx` subprotocol. The frontend checks its access token with a protected request before connecting, allowing its normal refresh flow to run.
+
+The shell opens a connection for the selected client's `client_id` when its panel
+appears and closes it when the panel closes or the selection changes. It creates
+a new tab ID for each panel instance. The backend stores connections by client
+and tab ID. `Send(clientID, data)` sends JSON to every open tab for that client.
+Incoming WebSocket messages are currently read and discarded. Task submission
+uses HTTP; live output delivery is not connected yet.
+
+## Tasks
+
+### `POST /rest/tasks/new`
+
+Send a bearer-authenticated JSON request using the selected client and campaign:
+
+```json
+{"cmd":"load-module","args":[{"type":"string","value":"example"}],"client_id":42,"campaign_id":"<campaign-id>"}
+```
+
+The shell splits input on whitespace: the first word is `cmd`, and the remaining
+words become string arguments. The backend currently maps `load-module` and
+`unload-module`. Success returns HTTP 200 and `{"task_id":123}`. Errors return
+`{"error":"..."}`. A task ID confirms insertion; client execution and output
+are not implemented yet.

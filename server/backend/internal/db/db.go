@@ -56,6 +56,15 @@ var migrations = []string{
 		uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(CampaignUUID) REFERENCES campaigns(uuid) ON DELETE CASCADE
 	);`,
+	`CREATE TABLE IF NOT EXISTS tasks(
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		TaskID INTEGER NOT NULL,
+		ClientID INTEGER NOT NULL,
+		CampaignID TEXT NOT NULL,
+		CmdCode  INTEGER NOT NULL,
+		Args     TEXT NOT NULL CHECK (json_valid(Args)),
+		FOREIGN KEY(ClientID) REFERENCES clients(ClientID) ON DELETE CASCADE
+	);`,
 }
 
 type DB struct {

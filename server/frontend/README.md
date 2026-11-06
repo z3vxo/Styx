@@ -3,10 +3,13 @@
 React and Vite. Desktop is the supported layout target. Login saves access and
 refresh tokens in local storage, then opens `/dashboard`. The dashboard lists
 clients for the selected campaign. Double-click a client row to open a resizable
-shell below the list. Command execution is not connected to a backend endpoint yet.
+shell below the list. The shell opens a WebSocket for that client and submits
+commands through `POST /rest/tasks/new`; client output is not connected yet.
 Campaigns can be created from the New button beside the dashboard selector.
 The Campaigns tab lists each campaign's client and file totals and provides a confirmed delete action.
 The Files tab lists uploads for the selected campaign, uploads local files through the two-step API, and confirms deletions. Protected requests refresh an expired access token and retry once.
+The backend accepts connections at `/rest/ws/connect?client_id=...&tab_id=...`
+for future live output. See `api.md` for the current limits.
 
 ## Development
 

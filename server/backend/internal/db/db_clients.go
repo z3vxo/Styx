@@ -1,5 +1,17 @@
 package db
 
+func (db *DB) ClientExists(clientID int32) (bool, error) {
+	var exists bool
+	err := db.conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM clients WHERE ClientID = ?)`, clientID).Scan(&exists)
+	return exists, err
+}
+
+func (db *DB) ClientInCampaign(clientID int32, campaignID string) (bool, error) {
+	var exists bool
+	err := db.conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM clients WHERE ClientID = ? AND CampaignUUID = ?)`, clientID, campaignID).Scan(&exists)
+	return exists, err
+}
+
 // CREATE TABLE IF NOT EXISTS clients(
 //
 //	id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -7,6 +7,7 @@ import (
 	authapi "styx/internal/api/auth"
 	clients "styx/internal/api/clients"
 	files "styx/internal/api/files"
+	"styx/internal/api/tasks"
 	authmgr "styx/internal/auth"
 	"styx/internal/cfg"
 	"styx/internal/db"
@@ -23,6 +24,7 @@ type Server struct {
 	CampaignAPI *campaigns.API
 	UploadsAPI  *files.API
 	ClientsAPI  *clients.API
+	TasksAPI    *tasks.API
 	Cfg         *cfg.Cfg
 	WSHandler   *ws.WS
 }
@@ -47,6 +49,7 @@ func New() (*Server, error) {
 		CampaignAPI: campaigns.New(db, a),
 		UploadsAPI:  files.New(db, a),
 		ClientsAPI:  clients.New(db, a),
+		TasksAPI:    tasks.New(db, a),
 		WSHandler:   ws.New(db, a),
 	}, nil
 }
@@ -59,7 +62,8 @@ func (s *Server) Run() error {
 		r.Mount("/campaigns", s.CampaignAPI.Routes())
 		r.Mount("/uploads", s.UploadsAPI.Routes())
 		r.Mount("/clients", s.ClientsAPI.Routes())
-		r.Get("/ws/connect/{id}", s.WSHandler.HandleWS)
+		r.Mount("/tasks", s.TasksAPI.Routes())
+		r.Get("/ws/connect", s.WSHandler.HandleWS)
 	})
 
 	r.Handle("/*", web.Handler())

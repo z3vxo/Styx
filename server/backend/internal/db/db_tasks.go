@@ -1,10 +1,16 @@
 package db
 
-type NewTask struct {
-	CampaignID string `json:"campaign_id"`
-	ClientID   string `json:"client_id"`
-	TaskName   string `json:"task_name"`
+import (
+	"encoding/json"
+	"fmt"
+	"styx/internal/shared"
+)
+
+type NewTaskReq struct {
+	Cmd        string `json:"cmd"`
 	Args       []Arg  `json:"args"`
+	ClientID   int32  `json:"client_id"`
+	CampaignID string `json:"campaign_id"`
 }
 
 type Arg struct {
@@ -12,17 +18,27 @@ type Arg struct {
 	Value any    `json:"value"`
 }
 
-// var CmdToCodeMap = map[string]int {
-// 	""
-// }
+var CmdStrToCmdCode = map[string]int{
+	"load-module":   0x1,
+	"unload-module": 0x2,
+}
 
-/*
- * run = run exe/dll/shellcode
- * load-module <name> = load specific module
- * unload-module <name> = unload specfic module
- * ls/cp/rm/cat/whoami = as the command states
- *
- */
-func (db *DB) InsertTask(info NewTask) error {
-	return nil
+func (db *DB) InsertTask(task NewTaskReq) (int32, error) {
+	taskID, err := shared.GenRandInt32()
+	if err != nil {
+		return 0, err
+	}
+
+	jsonArgs, err := json.Marshal(task.Args)
+	if err != nil {
+		return 0, err
+	}
+
+	code, ok := CmdStrToCmdCode[task.Cmd]
+	if !ok {
+		return 0, fmt.Errorf("unknown command")
+	}
+	q := `INSERT INTO tasks(TaskID, ClientID, CmdCode, Args, CampaignID) VALUES(?,?,?,?,?)`
+	_, err = db.conn.Exec(q, taskID, task.ClientID, code, jsonArgs, task.CampaignID)
+	return taskID, err
 }
