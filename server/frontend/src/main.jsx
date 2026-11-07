@@ -45,7 +45,7 @@ function Login() {
   }
   return (<>
 <header className="site-header">
-    <a className="brand" href="/" aria-label="Styx home"><img src={mark} alt="" width="30" height="30" /><span>styx</span></a>
+    <a className="brand" href="/login" aria-label="Styx home"><img src={mark} alt="" width="30" height="30" /><span>styx</span></a>
   </header>
   <main>
     <section className="login" aria-labelledby="login-title">
@@ -66,5 +66,11 @@ function Login() {
   </>);
 }
 
-const dashboardRoute = window.location.pathname === '/dashboard' || window.location.pathname === '/dashboard/';
-createRoot(document.getElementById('root')).render(dashboardRoute ? <Dashboard /> : <Login />);
+const path = window.location.pathname;
+if (path === '/dashboard' || path === '/dashboard/') {
+  createRoot(document.getElementById('root')).render(<Dashboard />);
+} else if (path === '/login' || path === '/login/') {
+  createRoot(document.getElementById('root')).render(<Login />);
+} else {
+  window.location.replace('/login');
+}

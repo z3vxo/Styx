@@ -14,6 +14,7 @@ func TestEmbeddedFrontend(t *testing.T) {
 		method, path string
 		status       int
 	}{
+		{"GET", "/login", 200}, {"HEAD", "/login", 200}, {"GET", "/login/", 200},
 		{"GET", "/dashboard", 200}, {"HEAD", "/dashboard", 200}, {"GET", "/dashboard/", 200},
 		{"GET", "/", 200}, {"HEAD", "/", 200}, {"GET", "/missing.js", 404},
 		{"GET", "/rest", 404}, {"GET", "/rest/unknown", 404},
@@ -28,7 +29,7 @@ func TestEmbeddedFrontend(t *testing.T) {
 			if tc.method == "HEAD" && w.Body.Len() != 0 {
 				t.Fatal("HEAD returned a body")
 			}
-			if (tc.path == "/" || tc.path == "/dashboard" || tc.path == "/dashboard/") && tc.method == "GET" {
+			if (tc.path == "/" || tc.path == "/login" || tc.path == "/login/" || tc.path == "/dashboard" || tc.path == "/dashboard/") && tc.method == "GET" {
 				if !strings.Contains(w.Body.String(), `id="root"`) {
 					t.Fatal("missing React root")
 				}

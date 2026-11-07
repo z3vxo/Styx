@@ -67,5 +67,13 @@ test('invalid refresh clears the session and returns to login', async () => {
   assert.equal(state.values.has('access'), false);
   assert.equal(state.values.has('refresh'), false);
   assert.equal(state.values.has('currentCampaignId'), false);
-  assert.equal(state.redirectedTo(), '/');
+  assert.equal(state.redirectedTo(), '/login');
+});
+
+test('missing access token redirects to login without sending a request', async () => {
+  const state = setup();
+  state.values.delete('access');
+  globalThis.fetch = () => { throw new Error('unexpected request'); };
+  await assert.rejects(authFetch('/rest/campaigns/list'), /Session required/);
+  assert.equal(state.redirectedTo(), '/login');
 });

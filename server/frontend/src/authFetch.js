@@ -2,7 +2,7 @@ let refreshInFlight = null;
 
 function clearSession() {
   for (const key of ['access', 'refresh', 'campaignsResponse', 'currentCampaignId']) localStorage.removeItem(key);
-  window.location.replace('/');
+  window.location.replace('/login');
 }
 
 async function refreshAccess(failedAccess) {

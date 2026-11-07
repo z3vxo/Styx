@@ -30,8 +30,8 @@ func Handler() http.Handler {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		// Serve the React entry point for the dashboard, including browser refreshes.
-		if r.URL.Path == "/dashboard" || r.URL.Path == "/dashboard/" {
+		// Serve the React entry point for the two UI routes, including browser refreshes.
+		if r.URL.Path == "/login" || r.URL.Path == "/login/" || r.URL.Path == "/dashboard" || r.URL.Path == "/dashboard/" {
 			r = r.Clone(r.Context())
 			r.URL.Path = "/"
 		}

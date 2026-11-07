@@ -3,11 +3,12 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"styx/internal/agentsrv"
 	campaigns "styx/internal/api/Campaigns"
 	authapi "styx/internal/api/auth"
 	clients "styx/internal/api/clients"
 	files "styx/internal/api/files"
-	"styx/internal/api/tasks"
+	tasks "styx/internal/api/tasks"
 	authmgr "styx/internal/auth"
 	"styx/internal/cfg"
 	"styx/internal/db"
@@ -27,6 +28,7 @@ type Server struct {
 	TasksAPI    *tasks.API
 	Cfg         *cfg.Cfg
 	WSHandler   *ws.WS
+	AgentSrv    *agentsrv.Agent
 }
 
 func New() (*Server, error) {
@@ -51,6 +53,7 @@ func New() (*Server, error) {
 		ClientsAPI:  clients.New(db, a),
 		TasksAPI:    tasks.New(db, a),
 		WSHandler:   ws.New(db, a),
+		AgentSrv:    agentsrv.New(db),
 	}, nil
 }
 
@@ -65,8 +68,12 @@ func (s *Server) Run() error {
 		r.Mount("/tasks", s.TasksAPI.Routes())
 		r.Get("/ws/connect", s.WSHandler.HandleWS)
 	})
+	r.HandleFunc("/*", s.AgentSrv.HandleAgentSrv)
 
-	r.Handle("/*", web.Handler())
+	// todo, update frontend to NEVER be just plain / root, always either /login or /dashboard
+	r.Handle("/login", web.Handler())
+	r.Handle("/dashboard", web.Handler())
+	r.Handle("/assets/*", web.Handler())
 
 	listen := fmt.Sprintf("%s:%d", s.Cfg.Bind, s.Cfg.Port)
 

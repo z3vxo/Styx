@@ -5,7 +5,7 @@ This file covers `server/frontend` and `server/backend`. Keep it aligned with th
 ## Structure
 
 - `frontend/index.html` is the Vite entry document.
-- `frontend/src/main.jsx` mounts React, renders the login at `/`, and renders the dashboard at `/dashboard`. There is no routing library yet.
+- `frontend/src/main.jsx` mounts React, renders the login at `/login`, and renders the dashboard at `/dashboard`. Other frontend paths redirect to `/login`. There is no routing library yet.
 - `frontend/src/Dashboard.jsx` contains the dashboard shell, top navigation, campaign selector, and Campaigns view.
 - `frontend/src/FilesView.jsx` lists uploads for the selected campaign and implements the upload dialog.
 - `frontend/src/authFetch.js` sends protected requests and refreshes expired access tokens once.
@@ -15,7 +15,7 @@ This file covers `server/frontend` and `server/backend`. Keep it aligned with th
 - `frontend/api.md` documents backend endpoints and their response quirks. Read it before adding API calls.
 - `frontend/vite.config.js` proxies `/rest` to the Go API during development. `API_BASE_URL` overrides the default `http://127.0.0.1:8080`.
 - `frontend/scripts/stage-frontend.mjs` copies Vite output to `backend/internal/web/dist` for Go embedding.
-- `backend/internal/web/web.go` serves embedded assets and the React entry point for `/dashboard` refreshes. `/rest` remains the API namespace. Update this handler when adding client routes, and extend `web_test.go` accordingly.
+- `backend/internal/web/web.go` serves embedded assets and the React entry point for `/login` and `/dashboard` refreshes. `/rest` remains the API namespace. Update this handler when adding client routes, and extend `web_test.go` accordingly.
 - `server/MakeFile` defines the build; `server/Makefile` includes it so plain `make` works.
 
 ## Current behavior
@@ -27,7 +27,7 @@ This file covers `server/frontend` and `server/backend`. Keep it aligned with th
 - The dashboard initially shows only the client list. Double-click a client row (or focus it and press Enter) to open its shell below. The divider can be dragged or moved with arrow keys to resize the two areas; each area scrolls independently and the shell input stays fixed at the bottom. The client request is `GET /rest/clients/list/{campaignID}` with the access token; `clients: null` means an empty list. With no campaign selected, prompt the user to choose one. Opening the shell connects to `/rest/ws/connect?client_id=...&tab_id=...`. Commands POST to `/rest/tasks/new` with the selected client and campaign IDs and display the returned task ID.
 - The Campaigns tab lists campaign name, client and file totals, creation time, and a Delete action. Deletion requires a confirmation dialog and posts to `/rest/campaigns/delete/{id}`. The backend removes related client and upload records and stored upload directories. Reload the campaign list after deletion, which also clears a deleted current selection.
 - The Files tab lists uploads for the selected campaign. Its Upload dialog accepts a local file, an editable file name, and an `exe`, `dll`, or `shellcode` type. Uploads call `POST /rest/uploads/start` with campaign ID, file name, byte size, and type, then `PUT /rest/uploads/begin/{id}` with the raw file bytes. Each row has a confirmed Delete action that calls `DELETE /rest/uploads/delete/{id}`. Refresh files and campaign totals after upload or deletion. Builder and Settings remain disabled.
-- Protected frontend requests send the stored bearer access token. On a 401, they POST the stored refresh token to `/rest/auth/refresh`, save the new access and refresh pair, and retry once. An invalid refresh clears stored auth and returns to login. Campaign, upload, and client routes use bearer-token auth middleware.
+- Protected frontend requests send the stored bearer access token. On a 401, they POST the stored refresh token to `/rest/auth/refresh`, save the new access and refresh pair, and retry once. A missing access token or invalid refresh clears stored auth and redirects to `/login`. Campaign, upload, and client routes use bearer-token auth middleware.
 - `GET /rest/ws/connect?client_id=...&tab_id=...` validates the client ID, tab ID, and access token supplied via the `styx.jwt.<access>` WebSocket subprotocol. Connections are stored by client and tab; `Send(clientID, data)` broadcasts JSON to that client's open tabs. Incoming messages are read and discarded. Live output delivery is not connected yet.
 - `POST /rest/tasks/new` is mounted with bearer-token authentication. It accepts `cmd`, `args`, `client_id`, and `campaign_id`, inserts into the `tasks` table, and returns `task_id`. Only `load-module` and `unload-module` command names are mapped. Client execution/output are not implemented.
 
