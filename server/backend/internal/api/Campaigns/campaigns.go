@@ -34,7 +34,8 @@ func (a *API) Routes() chi.Router {
 }
 
 type NewCamapaignReq struct {
-	Name string `json:"name"`
+	Name  string   `json:"name"`
+	Paths []string `json:"paths"`
 }
 
 func (a *API) NewCampaign(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +45,13 @@ func (a *API) NewCampaign(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
+	if len(req.Paths) == 0 {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Atleast 1 path required"})
+		return
+	}
 
-	if err := a.db.InsertNewCampaign(req.Name); err != nil {
+	if err := a.db.InsertNewCampaign(req.Name, req.Paths); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return

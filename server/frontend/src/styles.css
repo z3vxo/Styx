@@ -69,14 +69,18 @@ footer { padding: 24px 40px; display: flex; justify-content: space-between; gap:
 .campaign-picker select:disabled { color: var(--muted); cursor: default; opacity: 1; }
 .campaign-create { height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 13px; }
 .campaign-create:hover { background: var(--raised); }
-.campaign-create-form { position: absolute; z-index: 10; top: 48px; right: 0; width: 320px; padding: 18px; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); box-shadow: 0 12px 28px #0006; }
+.campaign-create-form { position: absolute; z-index: 10; top: 48px; right: 0; width: 320px; max-height: calc(100svh - 72px); overflow-y: auto; padding: 18px; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); box-shadow: 0 12px 28px #0006; }
 .campaign-create-form label { margin-bottom: 10px; color: var(--text); }
 .campaign-create-form input { height: 42px; background: var(--surface); }
 .campaign-create-form p { margin: 10px 0 0; color: var(--error); font-size: 13px; }
-.campaign-create-form div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.campaign-create-form div button { height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 13px; }
-.campaign-create-form div button[type="submit"] { border-color: var(--accent); background: var(--accent); color: var(--ground); }
-.campaign-create-form div button:disabled { opacity: .55; cursor: default; }
+.campaign-path-heading { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; color: var(--text); font-size: 13px; font-weight: 500; }
+.campaign-path-heading button { width: 34px; height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 20px; line-height: 1; }
+.campaign-path-heading button:hover { background: var(--ground); }
+.campaign-path-list { display: grid; gap: 8px; }
+.campaign-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.campaign-form-actions button { height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 13px; }
+.campaign-form-actions button[type="submit"] { border-color: var(--accent); background: var(--accent); color: var(--ground); }
+.campaign-form-actions button:disabled { opacity: .55; cursor: default; }
 .campaign-error { position: absolute; right: 0; top: 48px; white-space: nowrap; font-size: 13px; color: var(--error); }
 .campaign-error button { color: var(--text); font: inherit; background: none; border: 0; text-decoration: underline; padding: 4px; }
 .dashboard-content { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr); padding: 0; place-items: stretch; }
@@ -136,8 +140,11 @@ footer { padding: 24px 40px; display: flex; justify-content: space-between; gap:
 .campaigns-table th { color: var(--muted); font-size: 13px; font-weight: 500; }
 .campaigns-table td { color: var(--muted); font-size: 15px; }
 .campaigns-table .campaign-name { color: var(--text); font-weight: 500; }
-.campaigns-table th:nth-child(2), .campaigns-table th:nth-child(3), .campaigns-table .campaign-number { width: 130px; text-align: right; font-variant-numeric: tabular-nums; }
-.campaigns-table th:nth-child(4), .campaigns-table td:nth-child(4) { width: 260px; }
+.campaigns-table th:nth-child(2), .campaigns-table td:nth-child(2) { width: 260px; }
+.campaign-paths ul { margin: 0; padding: 0; list-style: none; }
+.campaign-paths li + li { margin-top: 6px; }
+.campaigns-table th:nth-child(3), .campaigns-table th:nth-child(4), .campaigns-table .campaign-number { width: 130px; text-align: right; font-variant-numeric: tabular-nums; }
+.campaigns-table th:nth-child(5), .campaigns-table td:nth-child(5) { width: 260px; }
 .campaigns-table th:last-child, .campaigns-table td:last-child { width: 100px; text-align: right; }
 .campaign-actions button { padding: 7px 10px; border: 1px solid var(--border); border-radius: 5px; background: transparent; color: var(--error); font-size: 13px; }
 .campaign-actions button:hover { background: var(--raised); }

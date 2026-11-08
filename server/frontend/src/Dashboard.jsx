@@ -8,6 +8,7 @@ function CampaignPicker() {
   const { campaigns, currentCampaignId, selectCampaign, status, retry } = useCampaign();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
+  const [paths, setPaths] = useState(['']);
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState('');
   const placeholder = status === 'loading' ? 'Loading campaigns…' : status === 'error' ? 'Campaigns unavailable' : campaigns.length ? 'Select a campaign' : 'No campaigns';
@@ -15,18 +16,20 @@ function CampaignPicker() {
   async function createCampaign(event) {
     event.preventDefault();
     const value = name.trim();
-    if (!value || saving) return;
+    const campaignPaths = paths.map(path => path.trim());
+    if (!value || campaignPaths.some(path => !path.startsWith('/')) || saving) return;
     setSaving(true);
     setCreateError('');
     try {
       const response = await authFetch('/rest/campaigns/new', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: value }),
+        body: JSON.stringify({ name: value, paths: campaignPaths }),
         signal: AbortSignal.timeout(15000),
       });
       if (!response.ok) throw new Error('Could not create campaign. Please try again.');
       setName('');
+      setPaths(['']);
       setCreating(false);
       retry();
     } catch {
@@ -46,8 +49,10 @@ function CampaignPicker() {
     {creating && status === 'ready' && <form className="campaign-create-form" id="campaign-create-form" onSubmit={createCampaign}>
       <label htmlFor="campaign-name">New campaign</label>
       <input id="campaign-name" value={name} onChange={event => setName(event.target.value)} maxLength={120} autoFocus placeholder="Campaign name" required />
+      <div className="campaign-path-heading"><span>Paths</span><button type="button" aria-label="Add path" title="Add path" onClick={() => setPaths(current => [...current, ''])}>+</button></div>
+      <div className="campaign-path-list">{paths.map((path, index) => <input key={index} aria-label={`Path ${index + 1}`} value={path} onChange={event => setPaths(current => current.map((entry, i) => i === index ? event.target.value : entry))} placeholder="/whatever" pattern="/.*" title="Enter a path starting with /" required />)}</div>
       {createError && <p role="alert">{createError}</p>}
-      <div><button type="button" onClick={() => setCreating(false)}>Cancel</button><button type="submit" disabled={saving || !name.trim()}>{saving ? 'Creating…' : 'Create'}</button></div>
+      <div className="campaign-form-actions"><button type="button" onClick={() => setCreating(false)}>Cancel</button><button type="submit" disabled={saving || !name.trim() || paths.some(path => !path.trim().startsWith('/'))}>{saving ? 'Creating…' : 'Create'}</button></div>
     </form>}
     {status === 'error' && <div className="campaign-error" role="status">Could not load campaigns. <button onClick={retry}>Retry</button></div>}
   </div>;
@@ -318,9 +323,12 @@ function CampaignsView() {
     {status === 'error' && <p className="campaigns-message">Could not load campaigns. <button className="text-action" type="button" onClick={retry}>Retry</button></p>}
     {status === 'ready' && campaigns.length === 0 && <p className="campaigns-message">No campaigns yet. Use New in the top right to create one.</p>}
     {status === 'ready' && campaigns.length > 0 && <table className="campaigns-table">
-      <thead><tr><th>Name</th><th>Clients</th><th>Files</th><th>Created at</th><th><span className="sr-only">Actions</span></th></tr></thead>
+      <thead><tr><th>Name</th><th>Paths</th><th>Clients</th><th>Files</th><th>Created at</th><th><span className="sr-only">Actions</span></th></tr></thead>
       <tbody>{campaigns.map(campaign => <tr key={campaign.id}>
         <td className="campaign-name">{campaign.name}</td>
+        <td className="campaign-paths">{Array.isArray(campaign.paths) && campaign.paths.length > 0
+          ? <ul>{campaign.paths.map((path, index) => <li key={`${index}:${path}`}>{path}</li>)}</ul>
+          : '—'}</td>
         <td className="campaign-number">{campaign.total_clients ?? '—'}</td>
         <td className="campaign-number">{campaign.total_files ?? '—'}</td>
         <td>{campaign.created_at && !Number.isNaN(Date.parse(campaign.created_at)) ? new Date(campaign.created_at).toLocaleString() : '—'}</td>

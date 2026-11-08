@@ -2,7 +2,6 @@ package agentsrv
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"styx/internal/db"
@@ -44,6 +43,11 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	campaignID, err := agent.db.GetCampaignIdFromPath(r.URL.Path)
+	if campaignID == "" || err != nil {
+		http.NotFound(w, r)
+		return
+	}
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -51,19 +55,28 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(body) < 12 {
-		http.Error(w, "error: missing metadata", http.StatusBadRequest)
+		http.NotFound(w, r)
 		return
 	}
 	reader := bytes.NewReader(body)
 
-	AgentID, err := packager.ParseIncomingMetaDataAndValidate(reader)
+	MessageID, _, err := packager.ParseIncomingMetaDataAndValidate(reader)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	fmt.Printf("%d\n", AgentID)
+	switch MessageID {
+	case MSG_REGISTER:
+		// AgentInfo, err := packager.ParseRegister(reader)
+		// if err != nil {
+		// 	http.Error(w, "failed parsing", http.StatusInternalServerError)
+		// 	return
+		// }
 
-	fmt.Println(r.URL.Path)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("DONE"))
+		// 		if err := agent.db.InsertAgent(AgentInfo); err != nil {
+		//
+		// 		}
+
+	}
+
 }

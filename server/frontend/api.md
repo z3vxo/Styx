@@ -37,14 +37,14 @@ Send the stored refresh token as JSON `{"token":"<refresh>"}`. The frontend also
 Returns HTTP 200:
 
 ```json
-{"total":1,"campaigns":[{"name":"test","id":"01a1a7cc-eaac-7321-9e6a-fb16e611d085","total_clients":2,"total_files":3,"created_at":"2026-11-04T18:23:06Z"}]}
+{"total":1,"campaigns":[{"name":"test","id":"01a1a7cc-eaac-7321-9e6a-fb16e611d085","total_clients":2,"total_files":3,"paths":["/whatever"],"created_at":"2026-11-04T18:23:06Z"}]}
 ```
 
-`total_clients` and `total_files` count matching rows in `clients` and `user_uploads`, respectively, by `CampaignUUID`. When empty, `campaigns` may be `null`, so treat it as an empty list.
+`total_clients` and `total_files` count matching rows in `clients` and `user_uploads`, respectively, by `CampaignUUID`. `paths` lists the campaign's stored paths and is an empty array for a campaign without paths. When empty, `campaigns` may be `null`, so treat it as an empty list.
 
 ### `POST /rest/campaigns/new`
 
-Send `{"name":"Campaign name"}` as JSON. Success returns HTTP 200 and `{"status":"OK"}`; it does not return the new ID. Refresh the campaign list to obtain it.
+Send `{"name":"Campaign name","paths":["/whatever"]}` as JSON. At least one path is required. The New campaign form can add more path fields with its + button. The backend stores the paths with the campaign. Success returns HTTP 200 and `{"status":"OK"}`; it does not return the new ID. Refresh the campaign list to obtain it.
 
 ### `POST /rest/campaigns/delete/{id}`
 

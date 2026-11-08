@@ -1,5 +1,7 @@
 package db
 
+import "styx/internal/packager"
+
 func (db *DB) ClientExists(clientID int32) (bool, error) {
 	var exists bool
 	err := db.conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM clients WHERE ClientID = ?)`, clientID).Scan(&exists)
@@ -12,19 +14,6 @@ func (db *DB) ClientInCampaign(clientID int32, campaignID string) (bool, error) 
 	return exists, err
 }
 
-// CREATE TABLE IF NOT EXISTS clients(
-//
-//	id INTEGER PRIMARY KEY AUTOINCREMENT,
-//	ClientName TEXT NOT NULL,
-//	ClientID   INTEGER NOT NULL,
-//	CampaignUUID TEXT NOT NULL,
-//	Hostname TEXT NOT NULL DEFAULT '',
-//	Domain TEXT NOT NULL DEFAULT ''
-//
-// created_at,
-//
-//		FOREIGN KEY(CampaignUUID) REFERENCES campaigns(uuid) ON DELETE CASCADE
-//	);`,
 type Client struct {
 	Name      string `json:"name"`
 	ID        int32  `json:"client_id"`
@@ -62,4 +51,11 @@ func (db *DB) ListClients(id string) (*Clients, error) {
 	}
 
 	return &Clients{Total: len(clients), Entrys: clients}, nil
+}
+
+func (db *DB) InsertClient(info packager.AgentRegister) error {
+	q := `INSERT INTO Clients(ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID, Hostname, Username, Domain, Country, Arch) VALUES(?,?,?,?,?,?,?,?,?,?,?)`
+
+	_, err := db.conn.Exec(q, "tes-test", info.AgentID, info.IsAdmin, info.PPid, info.PPid, "11", info.Hostname, info.Username, info.Domain, info.Country, info.Arch)
+	return err
 }

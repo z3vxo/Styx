@@ -1,17 +1,37 @@
 package db
 
-import "github.com/google/uuid"
+import (
+	"database/sql"
 
-func (db *DB) InsertNewCampaign(name string) error {
+	"github.com/google/uuid"
+)
+
+func (db *DB) InsertNewCampaign(name string, paths []string) error {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return err
 	}
-	uuid := id.String()
+	campaignID := id.String()
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
 	q := `INSERT INTO campaigns(Name, uuid) VALUES(?,?)`
-	_, err = db.conn.Exec(q, name, uuid)
-	return err
+	_, err = tx.Exec(q, name, campaignID)
+	if err != nil {
+		return err
+	}
+	q = `INSERT INTO campaign_paths(uuid, Path) VALUES (?,?)`
+	for _, path := range paths {
+		_, err := tx.Exec(q, campaignID, path)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 type Campaigns struct {
@@ -20,12 +40,12 @@ type Campaigns struct {
 }
 
 type Campaign struct {
-	Name         string `json:"name"`
-	Id           string `json:"id"`
-	TotalClients int    `json:"total_clients"`
-	TotalFiles   int    `json:"total_files"`
-	//TotalBuilds  int    `json:"total_builds"`
-	CreatedAt string `json:"created_at"`
+	Name         string   `json:"name"`
+	Id           string   `json:"id"`
+	TotalClients int      `json:"total_clients"`
+	TotalFiles   int      `json:"total_files"`
+	Paths        []string `json:"paths"`
+	CreatedAt    string   `json:"created_at"`
 }
 
 func (db *DB) ListCampaigns() (*Campaigns, error) {
@@ -33,8 +53,10 @@ func (db *DB) ListCampaigns() (*Campaigns, error) {
 	q := `SELECT c.Name, c.uuid,
 		(SELECT COUNT(*) FROM clients AS cl WHERE cl.CampaignUUID = c.uuid),
 		(SELECT COUNT(*) FROM user_uploads AS f WHERE f.CampaignUUID = c.uuid),
-		c.created_at
-		FROM campaigns AS c`
+		c.created_at, cp.Path
+		FROM campaigns AS c
+		LEFT JOIN campaign_paths AS cp ON cp.uuid = c.uuid
+		ORDER BY c.id, cp.id`
 
 	rows, err := db.conn.Query(q)
 	if err != nil {
@@ -43,12 +65,23 @@ func (db *DB) ListCampaigns() (*Campaigns, error) {
 	defer rows.Close()
 
 	var campaigns []Campaign
+	indexByID := make(map[string]int)
 	for rows.Next() {
 		var c Campaign
-		if err := rows.Scan(&c.Name, &c.Id, &c.TotalClients, &c.TotalFiles, &c.CreatedAt); err != nil {
+		var path sql.NullString
+		if err := rows.Scan(&c.Name, &c.Id, &c.TotalClients, &c.TotalFiles, &c.CreatedAt, &path); err != nil {
 			return nil, err
 		}
-		campaigns = append(campaigns, c)
+		index, exists := indexByID[c.Id]
+		if !exists {
+			c.Paths = []string{}
+			campaigns = append(campaigns, c)
+			index = len(campaigns) - 1
+			indexByID[c.Id] = index
+		}
+		if path.Valid {
+			campaigns[index].Paths = append(campaigns[index].Paths, path.String)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -93,6 +126,7 @@ func (db *DB) DeleteCampaign(id string) ([]string, error) {
 	for _, query := range []string{
 		`DELETE FROM user_uploads WHERE CampaignUUID = ?`,
 		`DELETE FROM clients WHERE CampaignUUID = ?`,
+		`DELETE FROM campaign_paths WHERE uuid = ?`,
 		`DELETE FROM campaigns WHERE uuid = ?`,
 	} {
 		if _, err := tx.Exec(query, id); err != nil {
@@ -103,4 +137,12 @@ func (db *DB) DeleteCampaign(id string) ([]string, error) {
 		return nil, err
 	}
 	return fileIDs, nil
+}
+
+func (db *DB) GetCampaignIdFromPath(path string) (string, error) {
+	var uuid string
+	q := `SELECT c.uuid FROM campaign_paths AS cp JOIN campaigns AS c ON c.uuid = cp.uuid WHERE cp.Path = ?`
+	err := db.conn.QueryRow(q, path).Scan(&uuid)
+	return uuid, err
+
 }
