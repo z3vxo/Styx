@@ -54,6 +54,10 @@ func Run() (*sql.DB, error) {
 		"database",
 		"downloads",
 		"user-files",
+		"modules",
+		"modules/file-system",
+		"modules/ad-enum",
+		"modules/pe-loader",
 	}
 
 	for _, entry := range dirs {
