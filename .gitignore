@@ -28,8 +28,22 @@ pnpm-debug.log*
 /endpoint/**/*.a
 /endpoint/**/*.lib
 /endpoint/**/*.bin
-/endpoint/**/build/
+/endpoint/**/*.exe2
+/endpoint/**/*.pdb
+/endpoint/**/*.ilk
+/endpoint/**/*.exp
+/endpoint/**/*.map
+/endpoint/**/*.d
+/endpoint/**/build*/
 /endpoint/**/dist/
+/endpoint/**/.cache/
+
+# In-source CMake artifacts (prefer out-of-source builds)
+/endpoint/**/CMakeCache.txt
+/endpoint/**/CMakeFiles/
+/endpoint/**/cmake_install.cmake
+/endpoint/**/CTestTestfile.cmake
+/endpoint/**/compile_commands.json
 
 # Test, inspection and language caches
 coverage/
