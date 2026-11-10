@@ -15,7 +15,11 @@ Kratos* kratos = NULL;
 
 
 
-BOOL Kratos::Run( ) {
+BOOL Kratos::Run() {
+
+
+
+
 	return TRUE;
 }
 

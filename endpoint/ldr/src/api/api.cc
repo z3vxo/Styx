@@ -49,7 +49,7 @@ namespace api {
 
 						utils::mem::memcpy( funcName, symbol + index, utils::str::strlen ( symbol ) - index + 1);
 						BOOL isApiSetDll = FALSE;
-						if ( utils::str::strlen( moduleName ) > 11 && utils::str::strncmp ( moduleName, " api-ms-win- ", 11 ) == 0 ) {
+						if ( utils::str::strlen( moduleName ) > 11 && utils::str::strncmp ( moduleName, "api-ms-win-", 11 ) == 0 ) {
 							isApiSetDll = TRUE;
 						}
 						else if ( utils::str::strlen ( moduleName ) > 7 && utils::str::strncmp ( moduleName, "ext-ms-", 7 ) == 0 ) {

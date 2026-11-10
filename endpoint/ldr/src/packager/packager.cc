@@ -65,6 +65,23 @@ BOOL Packager::PackBytes( PBYTE in, INT32 n ) {
 	return TRUE;
 }
 
+BOOL Packager::PackWideBytes( PWSTR str ) {
+	if ( ! str ) { return FALSE; }
+	INT needed = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, str, -1, NULL, 0, NULL, NULL );
+	if ( needed == 0 ) { return FALSE; }
+	PBYTE buf = (PBYTE)kratos->apis.LocalAlloc( LMEM_FIXED | LMEM_ZEROINIT, needed );
+	if ( !buf ) { return FALSE; }
+	INT Written = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, str, -1, ( PSTR )buf, needed, NULL, NULL );
+	BOOL res = FALSE;
+	if (Written != 0) {
+		this->Pack4(Written);
+		res = this->PackBytes( buf, Written );
+	}
+	kratos->apis.LocalFree( buf );
+	return res;
+}
+
+
 
 PBYTE Packager::PackerPointer() {
 	return this->WriteBuf;
@@ -72,6 +89,13 @@ PBYTE Packager::PackerPointer() {
 
 INT32 Packager::PackerSize() {
 	return this->WriteIndex;
+}
+
+BOOL Packager::PrepareMetaData(INT32 AgentID) {
+	if ( ! this->Pack4( METADATA_MAGIC ) ) { return FALSE; }
+	if ( ! this->Pack4( AgentID ) ) { return FALSE; }
+
+	return TRUE;
 }
 
 
