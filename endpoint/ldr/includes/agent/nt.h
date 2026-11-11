@@ -162,6 +162,12 @@ typedef struct _CLIENT_ID {
     HANDLE UniqueThread;
 }CLIENT_ID, * PCLIENT_ID;
 
+typedef enum _SECTION_INHERIT
+{
+    ViewShare = 1, // The mapped view of the section will be mapped into any child processes created by the process.
+    ViewUnmap = 2  // The mapped view of the section will not be mapped into any child processes created by the process.
+} SECTION_INHERIT;
+
 extern "C" {
     NTSYSAPI NTSTATUS NTAPI RtlGetVersion(PRTL_OSVERSIONINFOW);
     NTSYSAPI NTSTATUS NTAPI RtlGetNtVersionNumbers(DWORD* major, DWORD* minor, DWORD* build);
@@ -193,6 +199,29 @@ extern "C" {
         _In_ ULONG TokenInformationLength,
         _Out_ PULONG ReturnLength
     );
+
+    NTSYSCALLAPI NTSTATUS NTAPI NtCreateSection(
+              PHANDLE            SectionHandle,
+              ACCESS_MASK        DesiredAccess,
+              POBJECT_ATTRIBUTES ObjectAttributes,
+              PLARGE_INTEGER     MaximumSize,
+              ULONG              SectionPageProtection,
+              ULONG              AllocationAttributes,
+              HANDLE             FileHandle
+    );
+
+    NTSYSCALLAPI NTSTATUS NTAPI NtMapViewOfSection(
+               HANDLE          SectionHandle,
+               HANDLE          ProcessHandle,
+               PVOID           *BaseAddress,
+               ULONG_PTR       ZeroBits,
+               SIZE_T          CommitSize,
+               PLARGE_INTEGER  SectionOffset,
+               PSIZE_T         ViewSize,
+               SECTION_INHERIT InheritDisposition,
+               ULONG           AllocationType,
+               ULONG           Win32Protect
+);
 }
 
 

@@ -62,6 +62,7 @@ func ParseIncomingMetaDataAndValidate(body *bytes.Reader) (int32, int32, error) 
 		return 0, 0, r.err
 	}
 	if !bytes.Equal(Magic, []byte{0xff, 0xf1, 0xf2, 0xf3}) {
+		fmt.Println("[!] MetaData doesnt match!")
 		return 0, 0, fmt.Errorf("incorrect magic value")
 	}
 
@@ -84,16 +85,16 @@ func ParseIncomingMetaDataAndValidate(body *bytes.Reader) (int32, int32, error) 
     [Country Str]  4 Bytes
 */
 
-func ParseRegister(body *bytes.Reader) (*AgentRegister, error) {
+func ParseRegister(body *bytes.Reader) (AgentRegister, error) {
 	r := &Reader{r: body}
 
-	Agent := &AgentRegister{}
+	Agent := AgentRegister{}
 
 	Agent.AgentID = r.unPack4()
 	Agent.Pid = r.unPack4()
 	Agent.PPid = r.unPack4()
 	arch := r.unPack4()
-	if arch == 0 {
+	if arch == 1 {
 		Agent.Arch = "x64"
 	} else {
 		Agent.Arch = "x86"

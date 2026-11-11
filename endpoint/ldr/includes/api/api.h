@@ -26,5 +26,5 @@ namespace api {
 	}
 	FARPROC GetProcAddressInternal( HMODULE dll, DWORD hash, INT depth );
 	FARPROC GetProcAddress( HMODULE dll, DWORD hash );
-	HMODULE GetModule( DWORD HASH );
+	HMODULE GetModule( DWORD HASH);
 }

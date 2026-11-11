@@ -4,21 +4,21 @@
 
 
 
-BOOL Packager::NewPacker( ) {
-	if ( this->WriteBuf )
-		kratos->apis.LocalFree( this->WriteBuf );
 
-	this->WriteBuf = ( PBYTE )kratos->apis.LocalAlloc( LMEM_FIXED | LMEM_ZEROINIT, 256 );
-	if ( ! this->WriteBuf )
-		return FALSE;
-
-	this->WriteIndex = 0;
-	this->WriteSize = 256;
+BOOL Packager::NewUnPacker(PBYTE Data, SIZE_T size) {
+	this->ReadBuf = Data;
+	this->ReadBufSize = size;
+	this->ReadIndex = 0;
 	return TRUE;
 }
 
+
 INT32 Packager::UnPack4( ) {
-	return 0;
+	if ( this->ReadIndex + sizeof( INT32 ) > this->ReadBufSize ) { return -1; }
+	INT32 val = 0;
+	utils::mem::memcpy(&val, this->ReadBuf + this->ReadIndex, sizeof(val));
+	this->ReadIndex += sizeof(val);
+	return val;
 }
 
 INT32 Packager::UnPackBytesReadInto( PBYTE out, INT32 n ) {
@@ -47,6 +47,19 @@ BOOL Packager::EnsurePacker( SIZE_T needed ) {
 
 	this->WriteBuf = NewBuf;
 	this->WriteSize = NewSize;
+	return TRUE;
+}
+
+BOOL Packager::NewPacker( ) {
+	if ( this->WriteBuf )
+		kratos->apis.LocalFree( this->WriteBuf );
+
+	this->WriteBuf = ( PBYTE )kratos->apis.LocalAlloc( LMEM_FIXED | LMEM_ZEROINIT, 256 );
+	if ( ! this->WriteBuf )
+		return FALSE;
+
+	this->WriteIndex = 0;
+	this->WriteSize = 256;
 	return TRUE;
 }
 
@@ -80,7 +93,6 @@ BOOL Packager::PackWideBytes( PWSTR str ) {
 	kratos->apis.LocalFree( buf );
 	return res;
 }
-
 
 
 PBYTE Packager::PackerPointer() {

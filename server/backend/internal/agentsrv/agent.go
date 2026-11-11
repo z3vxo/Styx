@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"styx/internal/db"
 	"styx/internal/packager"
+	"fmt"
 )
 
 type Agent struct {
@@ -62,20 +63,28 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 
 	MessageID, _, err := packager.ParseIncomingMetaDataAndValidate(reader)
 	if err != nil {
+		fmt.Println("[!] MetaData Failed to parse or validate")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
+	fmt.Println("[+] Agent POSTed")
 	switch MessageID {
 	case MSG_REGISTER:
-		// AgentInfo, err := packager.ParseRegister(reader)
-		// if err != nil {
-		// 	http.Error(w, "failed parsing", http.StatusInternalServerError)
-		// 	return
-		// }
 
-		// 		if err := agent.db.InsertAgent(AgentInfo); err != nil {
-		//
-		// 		}
+		AgentInfo, err := packager.ParseRegister(reader)
+		if err != nil {
+			fmt.Println("[!] Failed Parsing register");
+			http.Error(w, "failed parsing", http.StatusInternalServerError)
+			return
+		}
+
+		if err := agent.db.InsertAgent(AgentInfo); err != nil {
+			fmt.Println("[!] Failed Inserting");
+			http.Error(w, "failed parsing", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		return
 
 	}
 

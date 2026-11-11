@@ -53,9 +53,9 @@ func (db *DB) ListClients(id string) (*Clients, error) {
 	return &Clients{Total: len(clients), Entrys: clients}, nil
 }
 
-func (db *DB) InsertClient(info packager.AgentRegister) error {
+func (db *DB) InsertAgent(info packager.AgentRegister) error {
 	q := `INSERT INTO Clients(ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID, Hostname, Username, Domain, Country, Arch) VALUES(?,?,?,?,?,?,?,?,?,?,?)`
 
-	_, err := db.conn.Exec(q, "tes-test", info.AgentID, info.IsAdmin, info.PPid, info.PPid, "11", info.Hostname, info.Username, info.Domain, info.Country, info.Arch)
+	_, err := db.conn.Exec(q, "tes-test", info.AgentID, info.IsAdmin, info.Pid, info.PPid, "11", info.Hostname, info.Username, info.Domain, info.Country, info.Arch)
 	return err
 }

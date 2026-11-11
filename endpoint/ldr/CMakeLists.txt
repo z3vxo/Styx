@@ -18,5 +18,6 @@ target_include_directories(Kratos PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/includes"
 
 # Define DEBUG for every source of the target in Debug builds.
 target_compile_definitions(Kratos PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+target_compile_options(Kratos PRIVATE -w)
 
 target_link_options(Kratos PRIVATE -static -static-libgcc -static-libstdc++)

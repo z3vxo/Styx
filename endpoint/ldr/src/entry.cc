@@ -17,6 +17,11 @@ void Entry( ) {
 		DEBUG_LOG( "[!] Failed With Kratos->Init" );
 		return;
 	}
+
+	if ( ! kratos->Run( ) ) {
+		DEBUG_LOG("[!] Failed Run");
+		return FALSE;
+	}
 	
 
 }

