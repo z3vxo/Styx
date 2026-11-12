@@ -22,11 +22,16 @@ INT32 Packager::UnPack4( ) {
 }
 
 INT32 Packager::UnPackBytesReadInto( PBYTE out, INT32 n ) {
+
 	return 0;
 }
 
 PBYTE Packager::UnPackBytes( INT32 n ) {
-	return NULL;
+	PBYTE buf = (PBYTE)kratos->apis.LocalAlloc(ALLOC_ARGS, (SIZE_T)n);
+	if (!buf) return NULL;
+	utils::mem::memcpy(buf, this->ReadBuf + this->ReadIndex, n);
+	this->ReadIndex += n;
+	return buf;
 }
 
 
@@ -70,6 +75,15 @@ BOOL Packager::Pack4( INT32 val ) {
 	this->WriteIndex += sizeof( val );
 	return TRUE;
 }
+
+BOOL Packager::Pack8( INT64 val ) {
+	if ( ! this->EnsurePacker( ( SIZE_T ) this->WriteIndex + sizeof ( val ) ) ) { return FALSE; }
+	utils::mem::memcpy( this->WriteBuf + this->WriteIndex, &val, sizeof( val ) );
+
+	this->WriteIndex += sizeof( val );
+	return TRUE;
+}
+
 
 BOOL Packager::PackBytes( PBYTE in, INT32 n ) {
 	if (!this->EnsurePacker( ( SIZE_T ) this->WriteIndex + ( SIZE_T )n ) ) { return FALSE; }

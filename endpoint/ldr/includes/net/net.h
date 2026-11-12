@@ -34,7 +34,7 @@ public:
 	}
 
 	NetMgr();
-	BOOL init( );
+	//BOOL init( );
 	BOOL Post( PBYTE data, SIZE_T DataSize );
 	PBYTE Data( );
 	SIZE_T DataSize( );

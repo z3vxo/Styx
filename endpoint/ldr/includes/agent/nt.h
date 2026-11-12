@@ -221,7 +221,19 @@ extern "C" {
                SECTION_INHERIT InheritDisposition,
                ULONG           AllocationType,
                ULONG           Win32Protect
-);
+    );
+    NTSYSCALLAPI NTSTATUS NTAPI NtProtectVirtualMemory(
+            HANDLE ProcessHandle,
+            PVOID *BaseAddress,
+            PSIZE_T RegionSize,
+            ULONG NewProtection,
+            PULONG OldProtection
+    );
+    NTSYSCALLAPI NTSTATUS NTAPI NtFlushInstructionCache(
+            HANDLE ProcessHandle,
+            PVOID BaseAddress,
+            SIZE_T RegionSize
+    );
 }
 
 

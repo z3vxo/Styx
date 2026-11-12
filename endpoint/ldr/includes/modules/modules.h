@@ -9,15 +9,19 @@
 #define SECTION_HEADER(base) ((PIMAGE_SECTION_HEADER)((PBYTE)&NT_HEADERS(base)->OptionalHeader + FILE_HEADER(base)->SizeOfOptionalHeader))
 #define RVA2VA(type, base, rva) ((type)((PBYTE)(base) + (rva)))
 
+#define PAGE_ALIGN(x) (((SIZE_T)(x) + 0xFFF) & ~(SIZE_T)0xFFF);
+
 class Modules {
 private:
 	INT64 LoadModulesBitMap;
 	BOOL IsStompedDllLoaded;
 
-	PVOID StompedDllBase;
-	SIZE_T StompedDllSize;
+
 	PVOID StompedDllText;
 	SIZE_T StompedDllTextSize;
+	PVOID TextSectionIndex;
+
+	PVOID ReserveArena(SIZE_T size);
 	
 	
 
@@ -30,9 +34,11 @@ public:
 
 	//Modules() { this->LoadModulesBitMap = 0; /*this->IsStompedDllLoaded = FALSE;*/ }
 	BOOL IsModuleLoaded(INT32 bit);
-	BOOL LoadModule(PBYTE Module, SIZE_T ModuleSize);
+	BOOL LoadModule(PBYTE Module, SIZE_T ModuleSize, INT32 ModuleBit);
 	BOOL LoadStompedDll( );
-	PVOID GetStompedDllText(PVOID DllBase, SIZE_T* TextSize);
+	BOOL GetStompedDllText(PVOID DllBase);
+
+	INT64 GetLoadedModulesBitMap();
 
 };
 
