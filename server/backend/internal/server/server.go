@@ -12,6 +12,7 @@ import (
 	authmgr "styx/internal/auth"
 	"styx/internal/cfg"
 	"styx/internal/db"
+	"styx/internal/modules"
 	"styx/internal/web"
 	"styx/internal/ws"
 
@@ -20,6 +21,7 @@ import (
 
 type Server struct {
 	DB          *db.DB
+	modules     *modules.Registry
 	Auth        *authmgr.Auth
 	AuthAPI     *authapi.API
 	CampaignAPI *campaigns.API
@@ -43,17 +45,23 @@ func New() (*Server, error) {
 	}
 	a := authmgr.New(c)
 
+	m, err := modules.New()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Server{
 		DB:          db,
+		modules:     m,
 		Cfg:         c,
 		Auth:        a,
 		AuthAPI:     authapi.New(db, a),
 		CampaignAPI: campaigns.New(db, a),
 		UploadsAPI:  files.New(db, a),
 		ClientsAPI:  clients.New(db, a),
-		TasksAPI:    tasks.New(db, a),
+		TasksAPI:    tasks.New(db, a, m),
 		WSHandler:   ws.New(db, a),
-		AgentSrv:    agentsrv.New(db),
+		AgentSrv:    agentsrv.New(db, m),
 	}, nil
 }
 
@@ -70,7 +78,6 @@ func (s *Server) Run() error {
 	})
 	r.HandleFunc("/*", s.AgentSrv.HandleAgentSrv)
 
-	// todo, update frontend to NEVER be just plain / root, always either /login or /dashboard
 	r.Handle("/login", web.Handler())
 	r.Handle("/dashboard", web.Handler())
 	r.Handle("/assets/*", web.Handler())

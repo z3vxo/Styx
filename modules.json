@@ -1,0 +1,13 @@
+{
+  "file-system": {
+    "id": 1,
+    "file": "file-system.mod",
+    "commands": {
+      "ls": 1,
+      "cp": 2,
+      "pwd": 3,
+      "cat": 4,
+      "mv": 5
+    }
+  }
+}

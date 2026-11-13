@@ -108,7 +108,7 @@ func TestListCampaignsCountsClientsAndFiles(t *testing.T) {
 		}
 	}
 	for i, campaignID := range []string{"campaign-a", "campaign-a", "campaign-b"} {
-		if _, err := conn.Exec(`INSERT INTO clients (ClientName, ClientID, CampaignUUID) VALUES (?, ?, ?)`, "client", i+1, campaignID); err != nil {
+		if _, err := conn.Exec(`INSERT INTO clients (ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID) VALUES (?, ?, 0, 0, 0, ?)`, "client", i+1, campaignID); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -161,7 +161,7 @@ func TestDeleteCampaignRemovesRelatedRecords(t *testing.T) {
 		if _, err := conn.Exec(`INSERT INTO campaigns (Name, uuid) VALUES (?, ?)`, id, id); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := conn.Exec(`INSERT INTO clients (ClientName, ClientID, CampaignUUID) VALUES (?, ?, ?)`, "client", 1, id); err != nil {
+		if _, err := conn.Exec(`INSERT INTO clients (ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID) VALUES (?, ?, 0, 0, 0, ?)`, "client", 1, id); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := conn.Exec(`INSERT INTO user_uploads (FileUUID, FileName, FileSize, HasReloc, CampaignUUID) VALUES (?, ?, ?, ?, ?)`, id+"-file", "file.txt", 4, 1, id); err != nil {
@@ -192,5 +192,52 @@ func TestDeleteCampaignRemovesRelatedRecords(t *testing.T) {
 				t.Errorf("%s rows for %s = %d, want %d", table, tc.id, count, tc.want)
 			}
 		}
+	}
+}
+
+func TestSetupMigratesLegacyTasks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "styx.db")
+	legacy, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := legacy.Exec(`CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, TaskID INTEGER NOT NULL, ClientID INTEGER NOT NULL, CampaignID TEXT NOT NULL, CmdCode INTEGER NOT NULL, Args TEXT NOT NULL CHECK (json_valid(Args)))`); err != nil {
+		t.Fatal(err)
+	}
+	if err := legacy.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	conn, err := Setup(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	rows, err := conn.Query(`PRAGMA table_info(tasks)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	hasKind := false
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, dataType string
+		var defaultValue sql.NullString
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &primaryKey); err != nil {
+			t.Fatal(err)
+		}
+		if name == "Kind" {
+			hasKind = true
+		}
+		if name == "CmdCode" {
+			t.Fatal("legacy CmdCode column still present")
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if !hasKind {
+		t.Fatal("Kind column missing")
 	}
 }

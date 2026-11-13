@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"styx/internal/db"
+	"styx/internal/modules"
 )
 
 func Run() (*sql.DB, error) {
@@ -67,6 +68,22 @@ func Run() (*sql.DB, error) {
 		}
 		if os.Geteuid() == 0 {
 			if err := os.Chown(dir, uid, gid); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	modulesPath := filepath.Join(baseDir, "modules", "modules.json")
+	if _, err := os.Stat(modulesPath); errors.Is(err, os.ErrNotExist) {
+		data, err := json.MarshalIndent(modules.Default().Modules, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(modulesPath, data, 0644); err != nil {
+			return nil, err
+		}
+		if os.Geteuid() == 0 {
+			if err := os.Chown(modulesPath, uid, gid); err != nil {
 				return nil, err
 			}
 		}

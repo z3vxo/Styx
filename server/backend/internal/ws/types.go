@@ -36,9 +36,4 @@ type WsNewTaskResponse struct {
 	TaskID int32 `json:"task_id"`
 }
 
-var CmdNameToCmdCode = map[string]int{
-	"load-module":   0x1,
-	"unload-module": 0x2,
-}
-
 //--------------
