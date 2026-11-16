@@ -2,38 +2,17 @@ package ws
 
 import "encoding/json"
 
+// EventType identifies a dashboard WebSocket event.
 type EventType string
 
 const (
-	TaskCreate     EventType = "task.Create"
-	TaskCreateResp EventType = "task.Create.Response"
-	TaskOutput     EventType = "task.Output"
-	WsError        EventType = "ws.Error"
+	// NewAgent is broadcast when an agent registers.
+	NewAgent EventType = "agent.New"
 )
 
-// --------------core--------------
+// WSEvent is the envelope sent to dashboard connections.
 type WSEvent struct {
-	Event string          `json:"event"`
-	Meta  MetaData        `json:"metadata"`
-	Body  json.RawMessage `json:"body,omitempty"`
+	Event     EventType       `json:"event"`
+	MessageID string          `json:"message_id"`
+	Body      json.RawMessage `json:"body,omitempty"`
 }
-
-type MetaData struct {
-	MessageID string `json:"message_id"`
-	TabID     string `json:"tab_id"`
-}
-
-type ErrorResp struct {
-	Message string `json:"error"`
-}
-
-//--------------
-
-// --------------TASKS--------------
-
-type WsNewTaskResponse struct {
-	Ok     bool  `json:"ok"`
-	TaskID int32 `json:"task_id"`
-}
-
-//--------------

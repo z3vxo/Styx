@@ -5,6 +5,18 @@ import (
 	"testing"
 )
 
+func TestPackTasksWithoutTasksReturnsNoTasks(t *testing.T) {
+	for _, tasks := range [][]TaskRecord{nil, {}} {
+		out := PackTasks(tasks)
+		if len(out) != 4 {
+			t.Fatalf("length = %d, want 4", len(out))
+		}
+		if got := int32(binary.LittleEndian.Uint32(out)); got != RESP_NO_TASKS {
+			t.Fatalf("response = %#x, want %#x", got, RESP_NO_TASKS)
+		}
+	}
+}
+
 func TestPackTasksWritesLoadModule(t *testing.T) {
 	moduleData := []byte{1, 2, 3}
 	out := PackTasks([]TaskRecord{{TaskID: 9, Kind: "load-module", ModuleID: 1, ModuleData: moduleData}})

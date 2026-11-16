@@ -8,15 +8,27 @@ import (
 	"styx/internal/db"
 	"styx/internal/modules"
 	"styx/internal/packager"
+	"styx/internal/ws"
 )
 
 type Agent struct {
 	db      *db.DB
 	modules *modules.Registry
+	Ws      *ws.WS
 }
 
-func New(db *db.DB, modules *modules.Registry) *Agent {
-	return &Agent{db: db, modules: modules}
+func New(db *db.DB, modules *modules.Registry, w *ws.WS) *Agent {
+	return &Agent{db: db, modules: modules, Ws: w}
+}
+
+// NewAgent is the payload broadcast to dashboard tabs when an agent registers.
+type NewAgent struct {
+	CampaignID string `json:"campaign_id"`
+	Name       string `json:"name"`
+	ClientID   int32  `json:"client_id"`
+	Hostname   string `json:"hostname"`
+	Domain     string `json:"domain"`
+	CreatedAt  string `json:"created_at"`
 }
 
 /*
@@ -67,6 +79,7 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("[!] MetaData Failed to parse or validate")
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	fmt.Println("[+] Agent POSTed")
@@ -79,10 +92,23 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := agent.db.InsertAgent(AgentInfo); err != nil {
+		client, err := agent.db.InsertAgent(AgentInfo, campaignID)
+		if err != nil {
 			fmt.Println("[!] Failed Inserting")
 			http.Error(w, "failed parsing", http.StatusInternalServerError)
 			return
+		}
+
+		err = agent.Ws.SendNewAgent(NewAgent{
+			CampaignID: campaignID,
+			Name:       client.Name,
+			ClientID:   client.ID,
+			Hostname:   client.Hostname,
+			Domain:     client.Domain,
+			CreatedAt:  client.CreatedAt,
+		})
+		if err != nil {
+			fmt.Println("[!] Failed sending new agent event:", err)
 		}
 		w.WriteHeader(http.StatusOK)
 	case MSG_GET_TASK:

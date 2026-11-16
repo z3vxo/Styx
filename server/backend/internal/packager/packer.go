@@ -26,6 +26,9 @@ type taskArg struct {
 	Value any    `json:"value"`
 }
 
+// RESP_NO_TASKS is the 4-byte response sent when a poll has nothing to run.
+const RESP_NO_TASKS int32 = 0xa1
+
 var taskWireCodes = map[string]int32{
 	"load-module":   0xb1,
 	"list-modules":  0xb2,
@@ -35,6 +38,10 @@ var taskWireCodes = map[string]int32{
 
 func PackTasks(tasks []TaskRecord) []byte {
 	w := &Writer{}
+	if len(tasks) == 0 {
+		w.Pack4(RESP_NO_TASKS)
+		return w.Bytes()
+	}
 	w.Pack4(int32(len(tasks)))
 	for _, task := range tasks {
 		w.Pack4(task.TaskID)

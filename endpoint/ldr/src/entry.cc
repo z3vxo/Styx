@@ -1,5 +1,4 @@
 #include "agent/core.h"
-#include <stdio.h>
 
 
 

@@ -92,16 +92,17 @@ Use the file UUID, not the campaign ID. Success removes the stored file director
 
 ## WebSocket
 
-### `GET /rest/ws/connect?client_id={id}&tab_id={tabID}`
+### `GET /rest/ws/connect`
 
-The server upgrades this request after validating the numeric client ID, tab ID, and an access token sent as the `styx.jwt.<access>` WebSocket subprotocol. The browser also offers the `styx` subprotocol. The frontend checks its access token with a protected request before connecting, allowing its normal refresh flow to run.
+The dashboard opens one connection after login; it is not scoped to a client or tab and takes no query parameters. Authenticate by offering the `styx` subprotocol and `styx.jwt.<access>`; a missing or invalid access token returns HTTP 401. The server stores every dashboard connection and broadcasts agent registrations to all open tabs.
 
-The shell opens a connection for the selected client's `client_id` when its panel
-appears and closes it when the panel closes or the selection changes. It creates
-a new tab ID for each panel instance. The backend stores connections by client
-and tab ID. `Send(clientID, data)` sends JSON to every open tab for that client.
-Incoming WebSocket messages are currently read and discarded. Task submission
-uses HTTP; live output delivery is not connected yet.
+Each text message is a JSON envelope:
+
+```json
+{"event":"agent.New","message_id":"<uuid>","body":{"campaign_id":"<campaign-id>","name":"Nyx-Tartarus","client_id":42,"hostname":"host-a","domain":"example.com","created_at":"2026-11-16 16:20:00"}}
+```
+
+`agent.New` is currently the only event. The dashboard refetches `/rest/clients/list/{campaignID}` when an event matches the selected campaign, so the new client appears without a manual reload. Incoming browser messages are read and discarded. Task output delivery is not connected yet.
 
 ## Tasks
 

@@ -20,6 +20,7 @@ public:
 	SIZE_T ReadBufSize;
 	INT32 ReadIndex;
 	BOOL  NewUnPacker(PBYTE Data, SIZE_T size);
+	BOOL  ResetPackerIndex( INT32 index );
 	INT32 UnPack4( );
 	INT32 UnPackBytesReadInto( PBYTE out, INT32 N );
 	PBYTE UnPackBytes( INT32 n );

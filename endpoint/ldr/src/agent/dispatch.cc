@@ -6,7 +6,7 @@ BOOL Kratos::Dispatch() {
 	auto TotalTasks = packager->UnPack4();
 	packager->Pack4(TotalTasks);
 
-	while (--TotalTasks) {
+	for(int i = 0; i < TotalTasks; i++) {
 		auto CommandCode = packager->UnPack4();
 
 		switch ( CommandCode ) {
@@ -15,6 +15,7 @@ BOOL Kratos::Dispatch() {
 				break;
 			case TASK_LIST_MODULES:
 				this->moduleList();
+				break;
 
 		}
 	}

@@ -50,6 +50,8 @@ func New() (*Server, error) {
 		return nil, err
 	}
 
+	w := ws.New(a)
+
 	return &Server{
 		DB:          db,
 		modules:     m,
@@ -60,8 +62,8 @@ func New() (*Server, error) {
 		UploadsAPI:  files.New(db, a),
 		ClientsAPI:  clients.New(db, a),
 		TasksAPI:    tasks.New(db, a, m),
-		WSHandler:   ws.New(db, a),
-		AgentSrv:    agentsrv.New(db, m),
+		WSHandler:   w,
+		AgentSrv:    agentsrv.New(db, m, w),
 	}, nil
 }
 

@@ -53,9 +53,14 @@ func (db *DB) ListClients(id string) (*Clients, error) {
 	return &Clients{Total: len(clients), Entrys: clients}, nil
 }
 
-func (db *DB) InsertAgent(info packager.AgentRegister) error {
-	q := `INSERT INTO Clients(ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID, Hostname, Username, Domain, Country, Arch) VALUES(?,?,?,?,?,?,?,?,?,?,?)`
+func (db *DB) InsertAgent(info packager.AgentRegister, campaignID string) (Client, error) {
+	q := `INSERT INTO Clients(ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID, Hostname, Username, Domain, Country, Arch) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING ClientName, ClientID, Hostname, Domain, created_at`
 
-	_, err := db.conn.Exec(q, "tes-test", info.AgentID, info.IsAdmin, info.Pid, info.PPid, "11", info.Hostname, info.Username, info.Domain, info.Country, info.Arch)
-	return err
+	var client Client
+	err := db.conn.QueryRow(q, GenerateAgentName(), info.AgentID, info.IsAdmin, info.Pid, info.PPid, campaignID, info.Hostname, info.Username, info.Domain, info.Country, info.Arch).
+		Scan(&client.Name, &client.ID, &client.Hostname, &client.Domain, &client.CreatedAt)
+	if err != nil {
+		return Client{}, err
+	}
+	return client, nil
 }

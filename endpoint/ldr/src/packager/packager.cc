@@ -68,6 +68,14 @@ BOOL Packager::NewPacker( ) {
 	return TRUE;
 }
 
+// Rewind to a previously saved index (normally just after PrepareMetaData)
+// without freeing or reallocating the buffer.
+BOOL Packager::ResetPackerIndex( INT32 index ) {
+	if ( ! this->WriteBuf || index < 0 || ( SIZE_T )index > this->WriteSize ) { return FALSE; }
+	this->WriteIndex = index;
+	return TRUE;
+}
+
 BOOL Packager::Pack4( INT32 val ) {
 	if ( ! this->EnsurePacker( ( SIZE_T ) this->WriteIndex + sizeof ( val ) ) ) { return FALSE; }
 	utils::mem::memcpy( this->WriteBuf + this->WriteIndex, &val, sizeof( val ) );

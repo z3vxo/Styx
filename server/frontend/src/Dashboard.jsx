@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mark from './mark.svg';
 import { CampaignProvider, useCampaign } from './CampaignContext.jsx';
+import { AgentSocketProvider, useAgentSocket } from './AgentSocketContext.jsx';
 import { FilesView } from './FilesView.jsx';
 import { authFetch } from './authFetch.js';
 
@@ -60,10 +61,12 @@ function CampaignPicker() {
 
 function UsersPanel({ onSelectClient, selectedClientId }) {
   const { currentCampaignId, status: campaignStatus } = useCampaign();
+  const { lastAgent } = useAgentSocket();
   const [clients, setClients] = useState([]);
   const [status, setStatus] = useState('idle');
   const [requestedCampaignId, setRequestedCampaignId] = useState('');
   const [attempt, setAttempt] = useState(0);
+  const handledAgentRef = useRef(null);
 
   useEffect(() => {
     if (!currentCampaignId) return;
@@ -91,6 +94,12 @@ function UsersPanel({ onSelectClient, selectedClientId }) {
     return () => controller.abort();
   }, [currentCampaignId, attempt]);
 
+  useEffect(() => {
+    if (!lastAgent || lastAgent.messageId === handledAgentRef.current) return;
+    handledAgentRef.current = lastAgent.messageId;
+    if (lastAgent.campaign_id === currentCampaignId) setAttempt(n => n + 1);
+  }, [lastAgent, currentCampaignId]);
+
   const displayStatus = currentCampaignId ? requestedCampaignId === currentCampaignId ? status : 'loading' : campaignStatus === 'loading' ? 'loading' : 'idle';
   return <section className="dashboard-panel users-panel" aria-labelledby="users-title">
     <div className="panel-heading">
@@ -116,7 +125,7 @@ function UsersPanel({ onSelectClient, selectedClientId }) {
   </section>;
 }
 
-function newSocketId() {
+function newEntryId() {
   if (crypto.randomUUID) return crypto.randomUUID();
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
@@ -126,67 +135,13 @@ function ShellPanel({ client, onClose }) {
   const { currentCampaignId } = useCampaign();
   const [command, setCommand] = useState('');
   const [entries, setEntries] = useState([]);
-  const [connectionStatus, setConnectionStatus] = useState('connecting');
   const outputRef = useRef(null);
-  const socketRef = useRef(null);
   const taskRequestsRef = useRef(new Set());
-  const tabIdRef = useRef(null);
-  if (!tabIdRef.current) tabIdRef.current = newSocketId();
 
-  useEffect(() => {
-    const url = new URL('/rest/ws/connect', window.location.href);
-    url.searchParams.set('client_id', String(client.client_id));
-    url.searchParams.set('tab_id', tabIdRef.current);
-    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    const controller = new AbortController();
-    let socket;
-    setConnectionStatus('connecting');
-
-    const onMessage = event => {
-      let message;
-      try { message = JSON.parse(event.data); } catch { return; }
-      if (message.metadata?.tab_id && message.metadata.tab_id !== tabIdRef.current) return;
-      if (message.event === 'task.Output') {
-        setEntries(previous => [...previous, { id: newSocketId(), command: 'Output', response: String(message.body?.output ?? message.body?.message ?? '') }]);
-        return;
-      }
-    };
-    const onClose = () => {
-      socketRef.current = null;
-      setConnectionStatus(status => status === 'error' ? status : 'closed');
-    };
-
-    async function connect() {
-      try {
-        const response = await authFetch('/rest/campaigns/list', {
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
-        });
-        if (!response.ok) throw new Error('Could not authorize the connection');
-        if (controller.signal.aborted) return;
-        const access = localStorage.getItem('access');
-        if (!access) throw new Error('Session required');
-        socket = new WebSocket(url, ['styx', `styx.jwt.${access}`]);
-        socketRef.current = socket;
-        socket.onopen = () => setConnectionStatus('connected');
-        socket.onmessage = onMessage;
-        socket.onerror = () => setConnectionStatus('error');
-        socket.onclose = onClose;
-      } catch {
-        if (!controller.signal.aborted) setConnectionStatus('error');
-      }
-    }
-    connect();
-
-    return () => {
-      controller.abort();
-      for (const request of taskRequestsRef.current) request.abort();
-      taskRequestsRef.current.clear();
-      if (!socket) return;
-      socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null;
-      if (socketRef.current === socket) socketRef.current = null;
-      socket.close();
-    };
-  }, [client.client_id]);
+  useEffect(() => () => {
+    for (const request of taskRequestsRef.current) request.abort();
+    taskRequestsRef.current.clear();
+  }, []);
 
   useEffect(() => {
     if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
@@ -196,7 +151,7 @@ function ShellPanel({ client, onClose }) {
     const value = command.trim();
     if (!value) return;
     const [cmd, ...args] = value.split(/\s+/);
-    const entryId = newSocketId();
+    const entryId = newEntryId();
     const controller = new AbortController();
     taskRequestsRef.current.add(controller);
     setEntries(previous => [...previous, { id: entryId, command: value, response: 'Creating task…' }]);
@@ -224,7 +179,7 @@ function ShellPanel({ client, onClose }) {
     }
   }
   return <section className="dashboard-panel shell-panel" aria-label="Shell">
-    <div className="shell-context"><span>{client.name || client.hostname || `Client ${client.client_id}`}</span><span className="shell-connection" role="status">{connectionStatus === 'connecting' ? 'Connecting…' : connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'error' ? 'Connection failed' : 'Disconnected'}</span><button type="button" onClick={onClose} aria-label="Close command panel">Close</button></div>
+    <div className="shell-context"><span>{client.name || client.hostname || `Client ${client.client_id}`}</span><button type="button" onClick={onClose} aria-label="Close command panel">Close</button></div>
     <div className="shell-output" ref={outputRef} role="log" aria-live="polite" aria-label="Shell output">
       {entries.length === 0 && <p className="shell-placeholder">Command output will appear here.</p>}
       {entries.map(entry => <div className="shell-entry" key={entry.id}>
@@ -342,18 +297,20 @@ function CampaignsView() {
 export function Dashboard() {
   const [view, setView] = useState('dashboard');
   return <CampaignProvider>
-    <div className="dashboard-shell">
-      <header className="dashboard-topbar">
-        <a className="brand" href="/dashboard" aria-label="Styx home"><img src={mark} alt="" width="30" height="30" /><span>styx</span></a>
-        <nav className="top-nav" aria-label="Main navigation">
-          <button className="nav-item" type="button" onClick={() => setView('dashboard')} aria-current={view === 'dashboard' ? 'page' : undefined}>Dashboard</button>
-          <button className="nav-item" type="button" onClick={() => setView('campaigns')} aria-current={view === 'campaigns' ? 'page' : undefined}>Campaigns</button>
-          <button className="nav-item" type="button" onClick={() => setView('files')} aria-current={view === 'files' ? 'page' : undefined}>Files</button>
-          {['Builder', 'Settings'].map(name => <button className="nav-item" key={name} disabled title={`${name} is coming soon`}>{name}</button>)}
-        </nav>
-        <CampaignPicker />
-      </header>
-      {view === 'dashboard' ? <DashboardWorkspace /> : view === 'campaigns' ? <CampaignsView /> : <FilesView />}
-    </div>
+    <AgentSocketProvider>
+      <div className="dashboard-shell">
+        <header className="dashboard-topbar">
+          <a className="brand" href="/dashboard" aria-label="Styx home"><img src={mark} alt="" width="30" height="30" /><span>styx</span></a>
+          <nav className="top-nav" aria-label="Main navigation">
+            <button className="nav-item" type="button" onClick={() => setView('dashboard')} aria-current={view === 'dashboard' ? 'page' : undefined}>Dashboard</button>
+            <button className="nav-item" type="button" onClick={() => setView('campaigns')} aria-current={view === 'campaigns' ? 'page' : undefined}>Campaigns</button>
+            <button className="nav-item" type="button" onClick={() => setView('files')} aria-current={view === 'files' ? 'page' : undefined}>Files</button>
+            {['Builder', 'Settings'].map(name => <button className="nav-item" key={name} disabled title={`${name} is coming soon`}>{name}</button>)}
+          </nav>
+          <CampaignPicker />
+        </header>
+        {view === 'dashboard' ? <DashboardWorkspace /> : view === 'campaigns' ? <CampaignsView /> : <FilesView />}
+      </div>
+    </AgentSocketProvider>
   </CampaignProvider>;
 }

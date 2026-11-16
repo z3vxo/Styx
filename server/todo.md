@@ -14,13 +14,44 @@ agent output is turned into final, properly formatted text the server just sends
   `output, err := parsers.Parse(module, command, data)` → `ws.SendOutput(...)`.
 - **Parsers are discovered from the filesystem by convention**, never compiled in:
   `~/.local/share/styx/modules/<module>/<command>.lua`.
-- **Tasks are modeled as `kind + module + command + args`**, never a single
+- **Task model** is **kind + module + command + args**, never a single
   ambiguous `CmdCode`. Built-ins and module commands live in separate namespaces.
+- **Module model:** `modules.json` is the source of truth. A module's `id` is both
+  the module identifier and the bit used to track whether it is loaded. Each entry
+  in its `commands` map (`"ls": 1`, `"cat": 4`, ...) is the command code the server
+  sends. One module `.mod` contains the code for all of its commands and dispatches
+  on that code.
 - **Input is tokenized with a quote-aware lexer**, not `strings.Split`. Positional
   args are primary; optional named flags (`--flag value`) are allowed when clarity
   helps. No JSON schema of the binary format.
 - Old `endpoint/modules/*.c` modules are legacy and will be replaced; do not design
   the new output contract around their current binary layout.
+
+---
+
+## 0. Next up
+
+- [ ] Build `file-system.mod` with `ls` and `cat` only; add `cp`, `pwd`, and `mv`
+  later.
+  - Install it at `~/.local/share/styx/modules/file-system/file-system.mod` and
+    restart the server so `modules.New()` / `loadData()` picks it up.
+  - The server sends the command code from `modules.json` (`ls` = 1, `cat` = 4),
+    so the module must dispatch on it. The current ABI does not carry that code:
+    `common.asm` just jumps to `ModuleEntry(pModule, ctx, args, argLen)`. Extend
+    the entry ABI with the command code, pass it from the agent's `run-command`
+    handler, and switch inside the module.
+  - The makefile currently builds one `.mod` per `.c` (`ls.mod`, `cat.mod`).
+    Add a combined `file-system` target that links `ls.c` and `cat.c` with
+    per-command entry points and one dispatcher (or a `file-system.c`
+    dispatcher).
+- [ ] Get the embedded Lua parser package working (section 4). Keep parsers
+  filesystem-discovered at `~/.local/share/styx/modules/<module>/<command>.lua`;
+  no parser entries in `modules.json`.
+
+Verified against the running DB while adding these: task rows insert correctly
+(`pending -> sent`, resolved fields and args JSON intact), but `load-module` ships
+zero module bytes because no `.mod` is installed, `MSG_OUTPUT` is not handled, and
+the `task_output` table does not exist yet.
 
 ---
 
@@ -130,6 +161,8 @@ backend task API + catalog validation.
 
 ## 4. Output parsing (embedded Lua)
 
+**Active task.** Get this package working before wiring `MSG_OUTPUT`.
+
 Files: new `server/backend/internal/parsers/` (host + reader + render helpers),
 parser scripts under each module directory.
 
@@ -197,15 +230,16 @@ Files: `endpoint/ldr/includes/agent/core.h`,
 Files: `server/backend/internal/ws/ws.go`, `server/backend/internal/ws/types.go`,
 `server/backend/internal/agentsrv/agent.go`.
 
-- [ ] On `MSG_OUTPUT`, after formatting via Lua, call
-  `ws.Send(clientID, WSEvent{Event: "task.Output", Meta: {TaskID, TabID}, Body: {output}})`
-  so all open tabs for that client receive it.
-- [ ] Ensure `tab_id` metadata matches the frontend subscription (the frontend
-  already filters `message.metadata.tab_id`).
-- [ ] Frontend already listens for `event === 'task.Output'` and reads
-  `body.output` / `body.message` — keep that contract.
-- [ ] Decide: broadcast to all tabs of a client, or only the tab that created the
-  task. The current `Send(clientID, data)` broadcasts; document behavior.
+- [x] `GET /rest/ws/connect` is one authenticated dashboard-wide connection per
+  browser tab, with no `client_id`/`tab_id` query parameters.
+- [x] On `MSG_REGISTER`, insert the client and broadcast `agent.New` to every
+  dashboard connection.
+- [ ] On `MSG_OUTPUT`, after formatting via Lua, broadcast a task output event
+  carrying the task/client IDs so the owning campaign's tabs can render it.
+- [ ] Re-add frontend handling for task output and shell entries; it was removed
+  with the per-agent socket.
+- [ ] Decide whether output is scoped to the dashboard tab that created the task;
+  the current socket has no tab identity.
 
 ## 7. Frontend
 
