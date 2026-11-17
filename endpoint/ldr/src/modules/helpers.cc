@@ -84,3 +84,23 @@ PVOID Modules::ReserveArena(SIZE_T size) {
 	this->TextSectionIndex = cur + need;
 	return cur;
 }
+
+
+
+ModuleInformation* Modules::FindFreeModInfo() {
+	for (INT i = 0;i < 10; i++) {
+		if (this->ModuleInfos[i].EntryPoint == NULL) {
+			return &this->ModuleInfos[i];
+		}
+	}
+	return NULL;
+}
+
+ModuleInformation* Modules::FindModInfoEntry(INT32 needed) {
+	for (INT i = 0; i < 10; i++) {
+		if (this->ModuleInfos[i].id = needed) {
+			return &this->ModuleInfos[i];
+		}
+	}
+	return NULL;
+}

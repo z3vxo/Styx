@@ -56,8 +56,8 @@ func TestPackTasksWritesRunCommandArgs(t *testing.T) {
 		int32(binary.LittleEndian.Uint32(out[24:])),
 		int32(binary.LittleEndian.Uint32(out[28:])),
 	}
-	want := []int32{1, 4, 0xb3, 1, 4, 2, 7, 4}
-	if len(out) != 36 {
+	want := []int32{1, 4, 0xb3, 1, 4, 2, 7, 5}
+	if len(out) != 37 {
 		t.Fatalf("length = %d", len(out))
 	}
 	for index := range want {
@@ -65,7 +65,7 @@ func TestPackTasksWritesRunCommandArgs(t *testing.T) {
 			t.Fatalf("value %d = %d, want %d", index, values[index], want[index])
 		}
 	}
-	if string(out[32:]) != "path" {
+	if string(out[32:]) != "path\x00" {
 		t.Fatalf("string arg = %q", out[32:])
 	}
 }

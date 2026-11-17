@@ -1,43 +1,39 @@
-CCX64   = x86_64-w64-mingw32-gcc
+CXX64   = x86_64-w64-mingw32-g++
 NASM    = nasm
 OBJCOPY = x86_64-w64-mingw32-objcopy
 
-CFLAGS  = -Os -fno-asynchronous-unwind-tables -nostdlib
-CFLAGS += -fno-stack-protector -fno-ident
-CFLAGS += -fno-exceptions -mno-red-zone
-CFLAGS += -fno-builtin -w -masm=intel
-CFLAGS += -falign-functions=1 -falign-jumps=1 -falign-labels=1
+CXXFLAGS  = -Os -fno-asynchronous-unwind-tables -nostdlib
+CXXFLAGS += -fno-stack-protector -fno-ident
+CXXFLAGS += -fno-exceptions -fno-rtti -mno-red-zone
+CXXFLAGS += -fno-builtin -w -masm=intel
+CXXFLAGS += -falign-functions=1 -falign-jumps=1 -falign-labels=1
+CXXFLAGS += -std=c++20
 
 LDFLAGS = -Wl,-Tlinker.ld,--no-seh,-e,module_start,--gc-sections,-s
 
-MODULES = $(patsubst %.c,%,$(wildcard *.c))
-OUTDIR  = output
-INFO ?=
-ARGS ?=
+MODULE = file-system
+OUTDIR = output
+TARGET = $(OUTDIR)/$(MODULE).mod
 
-all: ls.bin
+all: file-system
+
+file-system: $(TARGET)
 
 common.o: common.asm
 	@ echo "[*] Assembling common stub..."
 	@ $(NASM) -f win64 common.asm -o common.o
 
-%.bin: %.c common.o linker.ld common.h
-	@ echo "[*] Compiling $* module..."
-	@ $(CCX64) $< common.o -o $*.exe $(CFLAGS) $(LDFLAGS)
-	@ echo "[*] Extracting .text -> $*.bin"
-	@ $(OBJCOPY) -O binary -j .text $*.exe $@
-
-# make <module> INFO="..." ARGS="..."  ->  compile + pack into output/<module>.mod
-$(MODULES): %: $(OUTDIR)/%.mod
-
-$(OUTDIR)/%.mod: %.bin ../scripts/packer.py
-	@ echo "[*] Packing $* -> $@"
-	@ python3 ../scripts/packer.py $< "$(INFO)" "$(ARGS)" $@
-	@ echo "[*] Cleaning intermediates..."
-	@ rm -f $*.exe $*.bin common.o
+# Compile the module and save its raw .text as <module>.mod.
+$(TARGET): $(MODULE).cc common.o linker.ld common.h
+	@ mkdir -p $(OUTDIR)
+	@ echo "[*] Compiling $(MODULE)..."
+	@ $(CXX64) $< common.o -o $(MODULE).exe $(CXXFLAGS) $(LDFLAGS)
+	@ echo "[*] Extracting .text -> $@"
+	@ $(OBJCOPY) -O binary -j .text $(MODULE).exe $@
+	@ rm -f $(MODULE).exe common.o
 
 clean:
 	@ rm -rf $(OUTDIR)
-	@ rm -f *.o *.exe *.bin
+	@ rm -f *.o *.exe
 
-.PHONY: all clean $(MODULES)
+.PHONY: all clean file-system

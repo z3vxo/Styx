@@ -3,6 +3,16 @@
 #include "packager/packager.h"
 
 
+// [TaskID] [ModuleBit] -> per command args
+void Kratos::runModuleCmd() {
+	INT32 TaskID = packager->UnPack4();
+	INT32 ModuleBit = packager->UnPack4( );
+	packager->Pack4(TaskID);
+
+	if ( ! modules->RunModuleCommand( ModuleBit ) ) {
+		return;
+	}
+}
 
 void Kratos::moduleLoad() {
 	INT32 TaskID   = packager->UnPack4( );

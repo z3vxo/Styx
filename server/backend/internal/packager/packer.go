@@ -85,9 +85,12 @@ func writeArgs(w *Writer, data string) {
 	}
 }
 
+// String args are length-prefixed and NUL-terminated so modules can pass the
+// buffer straight to Win32 APIs without copying it.
 func writeString(w *Writer, value string) {
-	w.Pack4(int32(len(value)))
+	w.Pack4(int32(len(value) + 1))
 	w.PackBytes([]byte(value))
+	w.PackBytes([]byte{0})
 }
 
 func toString(value any) string {

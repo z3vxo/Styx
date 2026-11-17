@@ -7,7 +7,7 @@
 #endif
 
 #include "nt.h"
-#include "../api/api.h"
+#include "api/api.h"
 #include "utils/utils.h"
 
 
@@ -61,6 +61,7 @@ private:
 	void moduleLoad();
 	void moduleUnload();
 	void moduleList();
+	void runModuleCmd();
 
 public:
 	struct Apis {

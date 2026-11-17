@@ -34,6 +34,7 @@ pnpm-debug.log*
 /endpoint/**/*.exp
 /endpoint/**/*.map
 /endpoint/**/*.d
+/endpoint/**/output/
 /endpoint/**/build*/
 /endpoint/**/dist/
 /endpoint/**/.cache/
@@ -66,4 +67,6 @@ Thumbs.db
 *.swo
 *~
 
-# Sources, Markdown, manifests, lockfiles, .agents/ and skills remain trackable.
+# Sources, manifests, lockfiles, .agents/ and skills remain trackable.
+# Markdown notes are local-only; docs already tracked stay tracked.
+*.md

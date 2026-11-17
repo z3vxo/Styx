@@ -16,6 +16,9 @@ BOOL Kratos::Dispatch() {
 			case TASK_LIST_MODULES:
 				this->moduleList();
 				break;
+			case TASK_RUN_CMD:
+				this->runModuleCmd();
+				break;
 
 		}
 	}

@@ -35,15 +35,13 @@ agent output is turned into final, properly formatted text the server just sends
   later.
   - Install it at `~/.local/share/styx/modules/file-system/file-system.mod` and
     restart the server so `modules.New()` / `loadData()` picks it up.
+  - `make file-system` compiles `file-system.cc` and writes its raw `.text` to
+    `output/file-system.mod`; no custom container, header, or metadata.
   - The server sends the command code from `modules.json` (`ls` = 1, `cat` = 4),
     so the module must dispatch on it. The current ABI does not carry that code:
-    `common.asm` just jumps to `ModuleEntry(pModule, ctx, args, argLen)`. Extend
-    the entry ABI with the command code, pass it from the agent's `run-command`
-    handler, and switch inside the module.
-  - The makefile currently builds one `.mod` per `.c` (`ls.mod`, `cat.mod`).
-    Add a combined `file-system` target that links `ls.c` and `cat.c` with
-    per-command entry points and one dispatcher (or a `file-system.c`
-    dispatcher).
+    `common.asm` just jumps to `run(PModule, CommandCode)`. Extend the entry ABI
+    with the command code, pass it from the agent's `run-command` handler, and
+    switch inside the module.
 - [ ] Get the embedded Lua parser package working (section 4). Keep parsers
   filesystem-discovered at `~/.local/share/styx/modules/<module>/<command>.lua`;
   no parser entries in `modules.json`.
@@ -259,7 +257,7 @@ Files: `server/backend/internal/setup/setup.go`, docs.
 - [ ] Module layout convention:
   ```
   ~/.local/share/styx/modules/<module>/
-      <module>.mod      # module binary container
+      <module>.mod      # raw compiled code (.text)
       <command>.lua     # optional parser, e.g. ls.lua
   ```
 - [ ] Ship parsers alongside modules; parser is optional (fallback if absent).
