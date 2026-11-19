@@ -40,7 +40,7 @@ SEC_B void do_ls(PModule mod) {
 	WIN32_FIND_DATAA fData = { 0 };
 	HANDLE hFind = fnFindFirstFileA( path, &fData );
 	if ( !hFind || hFind == INVALID_HANDLE_VALUE ) {
-		mod->ModulePack4( TASK_FAILED_WITH_CODE );
+		mod->ModulePack4( OUTPUT_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
 		return;
 	}

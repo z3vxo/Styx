@@ -1,13 +1,45 @@
 {
   "file-system": {
+    "abi": 1,
     "id": 1,
     "file": "file-system.mod",
+    "description": "Local filesystem operations",
     "commands": {
-      "ls": 1,
-      "cp": 2,
-      "pwd": 3,
-      "cat": 4,
-      "mv": 5
+      "ls": {
+        "code": 1,
+        "usage": "ls [path]",
+        "args": [
+          { "name": "path", "type": "string", "default": "." }
+        ]
+      },
+      "cp": {
+        "code": 2,
+        "usage": "cp <src> <dst>",
+        "args": [
+          { "name": "src", "type": "string", "required": true },
+          { "name": "dst", "type": "string", "required": true }
+        ]
+      },
+      "pwd": {
+        "code": 3,
+        "usage": "pwd",
+        "args": []
+      },
+      "cat": {
+        "code": 4,
+        "usage": "cat <path>",
+        "args": [
+          { "name": "path", "type": "string", "required": true }
+        ]
+      },
+      "mv": {
+        "code": 5,
+        "usage": "mv <src> <dst>",
+        "args": [
+          { "name": "src", "type": "string", "required": true },
+          { "name": "dst", "type": "string", "required": true }
+        ]
+      }
     }
   }
 }

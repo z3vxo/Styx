@@ -34,7 +34,7 @@ func TestResolveBuiltinsAndModuleCommands(t *testing.T) {
 		t.Fatalf("bare = %+v", bare)
 	}
 
-	explicit := db.NewTaskReq{Cmd: "run-command", Args: []db.Arg{{Type: "string", Value: "file-system"}, {Type: "string", Value: "cat"}}}
+	explicit := db.NewTaskReq{Cmd: "run-command", Args: []db.Arg{{Type: "string", Value: "file-system"}, {Type: "string", Value: "cat"}, {Type: "string", Value: "C:\\"}}}
 	if err := api.resolve(&explicit); err != nil {
 		t.Fatal(err)
 	}
@@ -45,5 +45,50 @@ func TestResolveBuiltinsAndModuleCommands(t *testing.T) {
 	unknown := db.NewTaskReq{Cmd: "nope"}
 	if err := api.resolve(&unknown); err == nil {
 		t.Fatal("unknown command resolved")
+	}
+}
+
+func TestResolveValidatesArguments(t *testing.T) {
+	api := &API{modules: modules.Default()}
+
+	if err := api.resolve(&db.NewTaskReq{Cmd: "cat"}); err == nil {
+		t.Fatal("cat accepted without a path")
+	}
+	if err := api.resolve(&db.NewTaskReq{Cmd: "cat", Args: []db.Arg{{Type: "string", Value: 1}}}); err == nil {
+		t.Fatal("cat accepted a non-string path")
+	}
+	if err := api.resolve(&db.NewTaskReq{Cmd: "ls", Args: []db.Arg{{Type: "string", Value: "/"}, {Type: "string", Value: "x"}}}); err == nil {
+		t.Fatal("ls accepted extra arguments")
+	}
+	if err := api.resolve(&db.NewTaskReq{Cmd: "pwd", Args: []db.Arg{{Type: "string", Value: "x"}}}); err == nil {
+		t.Fatal("pwd accepted arguments")
+	}
+	if err := api.resolve(&db.NewTaskReq{Cmd: "load-module", Args: []db.Arg{{Type: "string", Value: "file-system"}, {Type: "string", Value: "x"}}}); err == nil {
+		t.Fatal("load-module accepted extra arguments")
+	}
+
+	ls := db.NewTaskReq{Cmd: "ls"}
+	if err := api.resolve(&ls); err != nil {
+		t.Fatal(err)
+	}
+	if len(ls.Args) != 1 || ls.Args[0].Value != "." {
+		t.Fatalf("ls default args = %+v", ls.Args)
+	}
+
+	registry := &modules.Registry{Modules: map[string]modules.Modules{
+		"test": {
+			ID: 2,
+			Commands: map[string]modules.Command{
+				"seek": {Code: 1, Args: []modules.CommandArg{{Name: "offset", Type: "int32", Required: true}}},
+			},
+		},
+	}}
+	intAPI := &API{modules: registry}
+	if err := intAPI.resolve(&db.NewTaskReq{Cmd: "seek", Args: []db.Arg{{Type: "string", Value: "1"}}}); err == nil {
+		t.Fatal("seek accepted a string offset")
+	}
+	seek := db.NewTaskReq{Cmd: "seek", Args: []db.Arg{{Type: "int32", Value: float64(1)}}}
+	if err := intAPI.resolve(&seek); err != nil {
+		t.Fatal(err)
 	}
 }

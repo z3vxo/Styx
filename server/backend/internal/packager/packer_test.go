@@ -28,7 +28,7 @@ func TestPackTasksWritesLoadModule(t *testing.T) {
 		int32(binary.LittleEndian.Uint32(out[12:])),
 		int32(binary.LittleEndian.Uint32(out[16:])),
 	}
-	want := []int32{1, 9, 0xb1, 1, int32(len(moduleData))}
+	want := []int32{1, 0xb1, 9, 1, int32(len(moduleData))}
 	if len(out) != 20+len(moduleData) {
 		t.Fatalf("length = %d", len(out))
 	}
@@ -56,7 +56,7 @@ func TestPackTasksWritesRunCommandArgs(t *testing.T) {
 		int32(binary.LittleEndian.Uint32(out[24:])),
 		int32(binary.LittleEndian.Uint32(out[28:])),
 	}
-	want := []int32{1, 4, 0xb3, 1, 4, 2, 7, 5}
+	want := []int32{1, 0xb3, 4, 1, 4, 2, 7, 5}
 	if len(out) != 37 {
 		t.Fatalf("length = %d", len(out))
 	}

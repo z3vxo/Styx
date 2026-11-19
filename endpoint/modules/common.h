@@ -22,7 +22,7 @@ typedef struct {
 
 #define END_SIG 0xFFFFFFFF
 
-#define TASK_FAILED_WITH_CODE 5
+#define OUTPUT_ERROR  0xc4
 
 #define OUTPUT_NEEDS_PARSE 0xc2
 #define PARSER_LS 1

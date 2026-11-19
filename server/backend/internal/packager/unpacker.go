@@ -111,3 +111,49 @@ func ParseRegister(body *bytes.Reader) (AgentRegister, error) {
 
 	return Agent, r.err
 }
+
+
+type TaskOutputs struct {
+	output string 
+	taskID int32
+}
+
+type Output struct {
+	Total int
+	Outputs []TaskOutputs
+}
+
+func ParseAgentOutput(body *bytes.Reader) (Output, error) {
+
+	r := &Reader{r: body}
+
+	TotalTasks := r.unPack4()
+	if TotalTasks == 0 {return Output{}, nil}
+
+	var outputs []TaskOutputs
+	for range TotalTasks {
+		var o TaskOutputs
+		TaskId := r.unPack4()
+		OutputOk := r.unPack4()
+		switch OutputOk {
+		case OUTPUT_ERROR, OUTPUT_SUCCESS:
+			errorCode := r.unPack4() // need a error code -> string map
+			o.taskID = TaskId
+			o.output = CodeToStrings[errorCode]
+			fmt.Println(o.output)
+			break
+		// case OUTPUT_NEEDS_PARSE:
+		// 	ParseID := r.unPack4()
+			// call into o.output = parsers.Parse(ParseID)
+			//break
+			
+		}
+		
+
+		outputs = append(outputs, o)
+	}
+
+	return Output{Total: len(outputs), Outputs: outputs}, nil
+
+
+}

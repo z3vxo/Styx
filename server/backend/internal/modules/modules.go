@@ -13,9 +13,48 @@ type Registry struct {
 }
 
 type Modules struct {
-	ID       uint8             `json:"id"`
-	File     string            `json:"file"`
-	Commands map[string]uint32 `json:"commands"`
+	ABI         int                `json:"abi,omitempty"`
+	ID          uint8              `json:"id"`
+	File        string             `json:"file"`
+	Description string             `json:"description,omitempty"`
+	Commands    map[string]Command `json:"commands"`
+}
+
+type Command struct {
+	Code        uint32       `json:"code"`
+	Usage       string       `json:"usage,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Args        []CommandArg `json:"args,omitempty"`
+}
+
+type CommandArg struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Required    bool   `json:"required,omitempty"`
+	Default     any    `json:"default,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+func (c *Command) UnmarshalJSON(data []byte) error {
+	var code uint32
+	if err := json.Unmarshal(data, &code); err == nil {
+		c.Code = code
+		return nil
+	}
+
+	type commandJSON Command
+	var parsed commandJSON
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return err
+	}
+	if parsed.Code == 0 {
+		return fmt.Errorf("command code is required")
+	}
+	if parsed.Args == nil {
+		parsed.Args = []CommandArg{}
+	}
+	*c = Command(parsed)
+	return nil
 }
 
 func (mod *Registry) IsValidModuleName(name string) bool {
@@ -34,8 +73,8 @@ func (mod *Registry) ModuleData(name string) []byte {
 
 func (mod *Registry) ResolveCommand(name string) (string, Modules, uint32, bool) {
 	for moduleName, module := range mod.Modules {
-		if code, ok := module.Commands[name]; ok {
-			return moduleName, module, code, true
+		if command, ok := module.Commands[name]; ok {
+			return moduleName, module, command.Code, true
 		}
 	}
 	return "", Modules{}, 0, false
@@ -44,9 +83,43 @@ func (mod *Registry) ResolveCommand(name string) (string, Modules, uint32, bool)
 func Default() *Registry {
 	return &Registry{Modules: map[string]Modules{
 		"file-system": {
-			ID:       1,
-			File:     "file-system.mod",
-			Commands: map[string]uint32{"ls": 1, "cp": 2, "pwd": 3, "cat": 4, "mv": 5},
+			ABI:         1,
+			ID:          1,
+			File:        "file-system.mod",
+			Description: "Local filesystem operations",
+			Commands: map[string]Command{
+				"ls": {
+					Code:  1,
+					Usage: "ls [path]",
+					Args: []CommandArg{
+						{Name: "path", Type: "string", Default: "."},
+					},
+				},
+				"cp": {
+					Code:  2,
+					Usage: "cp <src> <dst>",
+					Args: []CommandArg{
+						{Name: "src", Type: "string", Required: true},
+						{Name: "dst", Type: "string", Required: true},
+					},
+				},
+				"pwd": {Code: 3, Usage: "pwd", Args: []CommandArg{}},
+				"cat": {
+					Code:  4,
+					Usage: "cat <path>",
+					Args: []CommandArg{
+						{Name: "path", Type: "string", Required: true},
+					},
+				},
+				"mv": {
+					Code:  5,
+					Usage: "mv <src> <dst>",
+					Args: []CommandArg{
+						{Name: "src", Type: "string", Required: true},
+						{Name: "dst", Type: "string", Required: true},
+					},
+				},
+			},
 		},
 	}}
 }

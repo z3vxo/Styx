@@ -39,7 +39,11 @@
 #define TASK_RUN_CMD      0xb3
 
 
-#define OUTPUT_NO_PARSE 0xc1
+// Output IDs
+#define OUTPUT_NO_PARSE    0xc1
+#define OUTPUT_NEEDS_PARSE 0xc2
+#define OUTPUT_SUCCESS     0xc3
+#define OUTPUT_ERROR       0xc4
 
 // Error Ids
 #define ERROR_MODULE_LOAD_FAILURE 11
@@ -117,7 +121,7 @@ public:
 	BOOL LoadApis();
 	BOOL Run();
 
-	BOOL Dispatch();
+	BOOL Dispatch( INT32 TotalTasks );
 };
 
 extern Kratos* kratos;

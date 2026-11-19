@@ -126,6 +126,11 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(packager.PackTasks(tasks))
 		return
+
+	 case MSG_OUTPUT:
+	 	_, _ = packager.ParseAgentOutput(reader)
+	 	w.WriteHeader(http.StatusOK)
+	 	return
 	}
 
 }

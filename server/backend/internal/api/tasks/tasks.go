@@ -63,6 +63,9 @@ func (a *API) resolve(req *db.NewTaskReq) error {
 	case "help":
 		req.Kind = "help"
 	case "load-module", "unload-module":
+		if len(req.Args) != 1 {
+			return fmt.Errorf("%s requires exactly one module name", req.Cmd)
+		}
 		name, ok := stringArg(req.Args, 0)
 		if !ok {
 			return fmt.Errorf("%s requires a module name", req.Cmd)
@@ -76,6 +79,9 @@ func (a *API) resolve(req *db.NewTaskReq) error {
 		req.Module = name
 		req.ModuleID = &moduleID
 	case "list-modules":
+		if len(req.Args) != 0 {
+			return fmt.Errorf("list-modules takes no arguments")
+		}
 		req.Kind = "list-modules"
 	case "run-command":
 		moduleName, ok := stringArg(req.Args, 0)
@@ -90,30 +96,43 @@ func (a *API) resolve(req *db.NewTaskReq) error {
 		if !ok {
 			return fmt.Errorf("unknown module %q", moduleName)
 		}
-		code, ok := module.Commands[command]
+		commandDef, ok := module.Commands[command]
 		if !ok {
 			return fmt.Errorf("unknown command %q in module %q", command, moduleName)
 		}
+		args, err := validateArgs(req.Args[2:], commandDef.Args)
+		if err != nil {
+			return fmt.Errorf("%s: %w", command, err)
+		}
 		moduleID := int32(module.ID)
-		commandCode := int32(code)
+		commandCode := int32(commandDef.Code)
 		req.Kind = "run-command"
 		req.Module = moduleName
 		req.ModuleID = &moduleID
 		req.Command = command
 		req.Code = &commandCode
-		req.Args = req.Args[2:]
+		req.Args = args
 	default:
-		moduleName, module, code, ok := a.modules.ResolveCommand(req.Cmd)
+		moduleName, module, _, ok := a.modules.ResolveCommand(req.Cmd)
 		if !ok {
 			return fmt.Errorf("unknown command %q", req.Cmd)
 		}
+		commandDef, ok := module.Commands[req.Cmd]
+		if !ok {
+			return fmt.Errorf("unknown command %q", req.Cmd)
+		}
+		args, err := validateArgs(req.Args, commandDef.Args)
+		if err != nil {
+			return fmt.Errorf("%s: %w", req.Cmd, err)
+		}
 		moduleID := int32(module.ID)
-		commandCode := int32(code)
+		commandCode := int32(commandDef.Code)
 		req.Kind = "run-command"
 		req.Module = moduleName
 		req.ModuleID = &moduleID
 		req.Command = req.Cmd
 		req.Code = &commandCode
+		req.Args = args
 	}
 	return nil
 }
@@ -127,6 +146,83 @@ func stringArg(args []db.Arg, index int) (string, bool) {
 		return "", false
 	}
 	return value, true
+}
+
+func validateArgs(args []db.Arg, schema []modules.CommandArg) ([]db.Arg, error) {
+	if schema == nil {
+		return args, nil
+	}
+	if len(args) > len(schema) {
+		return nil, fmt.Errorf("expected at most %d argument(s), got %d", len(schema), len(args))
+	}
+	validated := make([]db.Arg, 0, len(schema))
+	for index, spec := range schema {
+		if index < len(args) {
+			if err := validateArg(args[index], spec); err != nil {
+				return nil, err
+			}
+			validated = append(validated, args[index])
+			continue
+		}
+		if spec.Required {
+			return nil, fmt.Errorf("missing argument: %s", spec.Name)
+		}
+		if spec.Default != nil {
+			validated = append(validated, db.Arg{Type: spec.Type, Value: spec.Default})
+		}
+	}
+	return validated, nil
+}
+
+func validateArg(arg db.Arg, spec modules.CommandArg) error {
+	switch spec.Type {
+	case "", "string":
+		if arg.Type != "" && arg.Type != "string" {
+			return fmt.Errorf("argument %q expects string, got %q", spec.Name, arg.Type)
+		}
+		if _, ok := arg.Value.(string); !ok {
+			return fmt.Errorf("argument %q expects string", spec.Name)
+		}
+	case "int", "int32", "integer":
+		if arg.Type != "" && arg.Type != "int" && arg.Type != "int32" && arg.Type != "integer" {
+			return fmt.Errorf("argument %q expects int32, got %q", spec.Name, arg.Type)
+		}
+		if _, ok := parseInt64(arg.Value); !ok {
+			return fmt.Errorf("argument %q expects int32", spec.Name)
+		}
+	case "bool", "boolean":
+		if arg.Type != "" && arg.Type != "bool" && arg.Type != "boolean" {
+			return fmt.Errorf("argument %q expects bool, got %q", spec.Name, arg.Type)
+		}
+		if _, ok := arg.Value.(bool); !ok {
+			return fmt.Errorf("argument %q expects bool", spec.Name)
+		}
+	default:
+		return fmt.Errorf("argument %q has unsupported type %q", spec.Name, spec.Type)
+	}
+	return nil
+}
+
+func parseInt64(value any) (int64, bool) {
+	switch number := value.(type) {
+	case int:
+		return int64(number), true
+	case int32:
+		return int64(number), true
+	case int64:
+		return number, true
+	case float64:
+		converted := int64(number)
+		if float64(converted) != number {
+			return 0, false
+		}
+		return converted, true
+	case json.Number:
+		parsed, err := number.Int64()
+		return parsed, err == nil
+	default:
+		return 0, false
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
