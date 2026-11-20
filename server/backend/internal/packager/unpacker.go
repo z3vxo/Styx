@@ -133,15 +133,21 @@ func ParseAgentOutput(body *bytes.Reader) (Output, error) {
 	var outputs []TaskOutputs
 	for range TotalTasks {
 		var o TaskOutputs
-		TaskId := r.unPack4()
+		o.taskID = r.unPack4()
 		OutputOk := r.unPack4()
 		switch OutputOk {
 		case OUTPUT_ERROR, OUTPUT_SUCCESS:
-			errorCode := r.unPack4() // need a error code -> string map
-			o.taskID = TaskId
+			errorCode := r.unPack4() // need a error code -> string map	
 			o.output = CodeToStrings[errorCode]
 			fmt.Println(o.output)
 			break
+		case OUTPUT_NO_PARSE:
+			size := r.unPack4()
+			data := r.unPackBytes(size)
+			o.output = string(data)
+			fmt.Println(o.output)
+			break
+
 		// case OUTPUT_NEEDS_PARSE:
 		// 	ParseID := r.unPack4()
 			// call into o.output = parsers.Parse(ParseID)

@@ -18,6 +18,19 @@ func TestResolveBuiltinsAndModuleCommands(t *testing.T) {
 		t.Fatalf("load = %+v", load)
 	}
 
+	unload := db.NewTaskReq{Cmd: "unload-module", Args: []db.Arg{{Type: "string", Value: "file-system"}}}
+	if err := api.resolve(&unload); err != nil {
+		t.Fatal(err)
+	}
+	if unload.Kind != "unload-module" || unload.Module != "file-system" || unload.ModuleID == nil || *unload.ModuleID != 1 {
+		t.Fatalf("unload = %+v", unload)
+	}
+
+	unknownUnload := db.NewTaskReq{Cmd: "unload-module", Args: []db.Arg{{Type: "string", Value: "missing"}}}
+	if err := api.resolve(&unknownUnload); err == nil {
+		t.Fatal("unknown module unloaded")
+	}
+
 	list := db.NewTaskReq{Cmd: "list-modules"}
 	if err := api.resolve(&list); err != nil {
 		t.Fatal(err)

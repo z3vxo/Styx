@@ -16,6 +16,9 @@ typedef struct {
 
 	FARPROC ( WINAPI* ModuleGetProcAddress )( HMODULE dll, DWORD Hash );
 	HMODULE ( WINAPI* ModuleGetModule )( DWORD Hash );
+
+	HLOCAL ( WINAPI* ModuleAllocate )( SIZE_T size );
+	HLOCAL ( WINAPI* ModuleFreeMem ) ( HLOCAL buf  );
 }Module, *PModule;
 
 
@@ -24,7 +27,11 @@ typedef struct {
 
 #define OUTPUT_ERROR  0xc4
 
+
+#define CAT_ERROR_NOT_FILE 20
+
 #define OUTPUT_NEEDS_PARSE 0xc2
+#define OUTPUT_NO_PARSE    0xc1
 #define PARSER_LS 1
 
 constexpr DWORD HasherA(PCHAR str) {

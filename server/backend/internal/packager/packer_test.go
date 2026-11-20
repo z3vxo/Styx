@@ -42,6 +42,26 @@ func TestPackTasksWritesLoadModule(t *testing.T) {
 	}
 }
 
+func TestPackTasksWritesUnloadModule(t *testing.T) {
+	out := PackTasks([]TaskRecord{{TaskID: 5, Kind: "unload-module", ModuleID: 2}})
+
+	if len(out) != 16 {
+		t.Fatalf("length = %d", len(out))
+	}
+	values := []int32{
+		int32(binary.LittleEndian.Uint32(out[0:])),
+		int32(binary.LittleEndian.Uint32(out[4:])),
+		int32(binary.LittleEndian.Uint32(out[8:])),
+		int32(binary.LittleEndian.Uint32(out[12:])),
+	}
+	want := []int32{1, 0xb4, 5, 2}
+	for index := range want {
+		if values[index] != want[index] {
+			t.Fatalf("value %d = %d, want %d", index, values[index], want[index])
+		}
+	}
+}
+
 func TestPackTasksWritesRunCommandArgs(t *testing.T) {
 	args := `[{"type":"int32","value":7},{"type":"string","value":"path"}]`
 	out := PackTasks([]TaskRecord{{TaskID: 4, Kind: "run-command", ModuleID: 1, Code: 4, Args: args}})
@@ -54,10 +74,9 @@ func TestPackTasksWritesRunCommandArgs(t *testing.T) {
 		int32(binary.LittleEndian.Uint32(out[16:])),
 		int32(binary.LittleEndian.Uint32(out[20:])),
 		int32(binary.LittleEndian.Uint32(out[24:])),
-		int32(binary.LittleEndian.Uint32(out[28:])),
 	}
-	want := []int32{1, 0xb3, 4, 1, 4, 2, 7, 5}
-	if len(out) != 37 {
+	want := []int32{1, 0xb3, 4, 1, 4, 7, 5}
+	if len(out) != 33 {
 		t.Fatalf("length = %d", len(out))
 	}
 	for index := range want {
@@ -65,7 +84,7 @@ func TestPackTasksWritesRunCommandArgs(t *testing.T) {
 			t.Fatalf("value %d = %d, want %d", index, values[index], want[index])
 		}
 	}
-	if string(out[32:]) != "path\x00" {
-		t.Fatalf("string arg = %q", out[32:])
+	if string(out[28:]) != "path\x00" {
+		t.Fatalf("string arg = %q", out[28:])
 	}
 }

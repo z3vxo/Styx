@@ -27,6 +27,9 @@ BOOL Kratos::Dispatch( INT32 TotalTasks ) {
 			case TASK_RUN_CMD:
 				this->runModuleCmd( );
 				break;
+			case TASK_UNLOAD_MODULE:
+				this->moduleUnload( );
+				break;
 
 		}
 	}

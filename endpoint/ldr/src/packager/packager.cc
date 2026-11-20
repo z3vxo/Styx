@@ -47,8 +47,11 @@ BOOL Packager::EnsurePacker( SIZE_T needed ) {
 		NewSize *= 2;
 	} while ( NewSize < needed );
 
-	PBYTE NewBuf = ( PBYTE )kratos->apis.LocalReAlloc( this->WriteBuf, NewSize, LMEM_FIXED );
+	PBYTE NewBuf = ( PBYTE )kratos->apis.LocalAlloc( ALLOC_ARGS, NewSize );
 	if (!NewBuf) { return FALSE; }
+
+	utils::mem::memcpy( NewBuf, this->WriteBuf, ( SIZE_T )this->WriteIndex );
+	kratos->apis.LocalFree( this->WriteBuf );
 
 	this->WriteBuf = NewBuf;
 	this->WriteSize = NewSize;
@@ -68,8 +71,7 @@ BOOL Packager::NewPacker( ) {
 	return TRUE;
 }
 
-// Rewind to a previously saved index (normally just after PrepareMetaData)
-// without freeing or reallocating the buffer.
+
 BOOL Packager::ResetPackerIndex( INT32 index ) {
 	if ( ! this->WriteBuf || index < 0 || ( SIZE_T )index > this->WriteSize ) { return FALSE; }
 	this->WriteIndex = index;

