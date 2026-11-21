@@ -5,3 +5,7 @@ const (
 	MSG_REGISTER = 0x2
 	MSG_OUTPUT   = 0x3
 )
+
+type ErrorMsg struct {
+	Msg string `json:"error_msg"`
+}

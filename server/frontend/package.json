@@ -15,7 +15,8 @@
   "type": "module",
   "dependencies": {
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "shlex": "^3.0.1"
   },
   "devDependencies": {
     "vite": "^8.3.5"

@@ -5,6 +5,7 @@
 #define DO_PWD 3
 #define DO_CAT 4
 #define DO_MV  5
+#define DO_CD  6
 
 
 
@@ -17,6 +18,7 @@ typedef BOOL(WINAPI *pCloseHandle)(HANDLE hObject);
 typedef BOOL(WINAPI* pReadFile)(HANDLE hFile, LPVOID Buffer, DWORD NumberOfBytesToRead, LPDWORD NumberOfBytesRead, LPOVERLAPPED Overlapped);
 typedef HANDLE(WINAPI* pCreateFileA)(LPCSTR FileName, DWORD desired, DWORD Shared, LPSECURITY_ATTRIBUTES lpSecAttrs, DWORD CreateDispo, DWORD FlagsAndAttrs, HANDLE Template);
 typedef DWORD(WINAPI* pGetCurrentDirectoryA)(DWORD BufferLen, LPSTR lpBuffer);
+typedef BOOL(WINAPI* pSetCurrentDirectoryA)(LPCTSTR PathName);
 
 SEC_B void do_ls(PModule mod) {
 	auto Dirlen = mod->ModuleUnpack4();
@@ -129,7 +131,7 @@ SEC_B void do_cat(PModule mod) {
 		return;
 	}
 
-	
+
 	res = fnReadFile(hFile, buf, ChunkSize, &BytesRead, NULL);
 	if (!res) {
 		mod->ModulePack4( OUTPUT_ERROR );
@@ -144,9 +146,6 @@ SEC_B void do_cat(PModule mod) {
 	fnCloseHandle(hFile);
 
 	return;
-
-
-
 }
 
 
@@ -166,13 +165,35 @@ SEC_B void do_pwd(PModule mod) {
 		mod->ModulePack4( OUTPUT_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
 		return;
-	} 
+	}
 
 	mod->ModulePack4(OUTPUT_NO_PARSE);
 	mod->ModulePack4( ( INT32 )res );
 	mod->ModulePackBytes(pwd, ( INT32 )res);
 }
 
+
+SEC_B void do_cd(PModule mod) {
+    HMODULE k32 = mod->ModuleGetModule( HASH_STRW( L"KERNEL32.DLL" ) );
+
+    pSetCurrentDirectoryA fnSetCurrentDirectoryA = ( pSetCurrentDirectoryA )mod->ModuleGetProcAddress( k32, HASH_STRA( "SetCurrentDirectoryA" ) );
+   	pGetLastError fnGetLastError                 = ( pGetLastError         )mod->ModuleGetProcAddress( k32, HASH_STRA( "GetLastError"         ) );
+
+    auto pathLen = mod->ModuleUnpack4();
+	PBYTE path   = mod->ModuleUnpackBytes(pathLen);
+
+	if( ! fnSetCurrentDirectoryA(( PCHAR )path)) {
+	    mod->ModuleFreeMem( path );
+	    mod->ModulePack4(OUTPUT_ERROR);
+		mod->ModulePack4( ( INT32 )fnGetLastError( ));
+		return;
+	}
+
+     mod->ModuleFreeMem( path );
+     mod->ModulePack4(OUTPUT_SUCCESS);
+     mod->ModulePack4(CP_SUCCESS);
+     return;
+}
 
 /*
 	by the time we call into run, binary format will hold the args, each func just reads what it needs
@@ -190,6 +211,9 @@ SEC_B void do_pwd(PModule mod) {
 		break;
 	case DO_PWD:
 		do_pwd(mod);
+		break;
+	case DO_CD:
+	    do_cd(mod);
 		break;
 	}
 	return;

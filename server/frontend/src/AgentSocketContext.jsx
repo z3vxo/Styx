@@ -7,6 +7,7 @@ const retryDelayMs = 5000;
 export function AgentSocketProvider({ children }) {
   const [status, setStatus] = useState('connecting');
   const [lastAgent, setLastAgent] = useState(null);
+  const [outputsByAgent, setOutputsByAgent] = useState({});
 
   useEffect(() => {
     let disposed = false;
@@ -43,8 +44,20 @@ export function AgentSocketProvider({ children }) {
         next.onmessage = event => {
           let message;
           try { message = JSON.parse(event.data); } catch { return; }
-          if (message.event !== 'agent.New' || !message.body) return;
-          setLastAgent({ ...message.body, messageId: message.message_id ?? '' });
+          const body = message.body;
+          if (!body) return;
+          const messageId = message.message_id ?? '';
+          if (message.event === 'agent.New') {
+            setLastAgent({ ...body, messageId });
+            return;
+          }
+          if (message.event === 'task.Output' && body.agent_id != null) {
+            setOutputsByAgent(previous => {
+              const outputs = [...(previous[body.agent_id] ?? []), { ...body, messageId }];
+              if (outputs.length > 200) outputs.splice(0, outputs.length - 200);
+              return { ...previous, [body.agent_id]: outputs };
+            });
+          }
         };
         next.onerror = () => {
           if (!disposed) setStatus('error');
@@ -76,7 +89,7 @@ export function AgentSocketProvider({ children }) {
     };
   }, []);
 
-  return <AgentSocketContext.Provider value={{ status, lastAgent }}>{children}</AgentSocketContext.Provider>;
+  return <AgentSocketContext.Provider value={{ status, lastAgent, outputsByAgent }}>{children}</AgentSocketContext.Provider>;
 }
 
 export function useAgentSocket() {

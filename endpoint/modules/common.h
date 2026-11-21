@@ -25,11 +25,13 @@ typedef struct {
 
 #define END_SIG 0xFFFFFFFF
 
-#define OUTPUT_ERROR  0xc4
 
+#define CP_SUCCESS 0xd1
 
 #define CAT_ERROR_NOT_FILE 20
 
+#define OUTPUT_ERROR  0xc4
+#define OUTPUT_SUCCESS 0xc3
 #define OUTPUT_NEEDS_PARSE 0xc2
 #define OUTPUT_NO_PARSE    0xc1
 #define PARSER_LS 1

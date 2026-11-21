@@ -112,54 +112,52 @@ func ParseRegister(body *bytes.Reader) (AgentRegister, error) {
 	return Agent, r.err
 }
 
-
 type TaskOutputs struct {
-	output string 
-	taskID int32
+	Output string `json:"output_string"`
+	TaskID int32  `json:"task_id"`
 }
 
 type Output struct {
-	Total int
-	Outputs []TaskOutputs
+	Total     int           `json:"total"`
+	Outputs   []TaskOutputs `json:"outputs"`
+	AgentID   int32         `json:"agent_id"`
+	TotalSize int64         `json:"total_size"`
 }
 
-func ParseAgentOutput(body *bytes.Reader) (Output, error) {
+func ParseAgentOutput(body *bytes.Reader, agentID int32) (Output, error) {
 
 	r := &Reader{r: body}
 
 	TotalTasks := r.unPack4()
-	if TotalTasks == 0 {return Output{}, nil}
+	if TotalTasks == 0 {
+		return Output{}, nil
+	}
 
 	var outputs []TaskOutputs
 	for range TotalTasks {
 		var o TaskOutputs
-		o.taskID = r.unPack4()
+		o.TaskID = r.unPack4()
 		OutputOk := r.unPack4()
 		switch OutputOk {
+
 		case OUTPUT_ERROR, OUTPUT_SUCCESS:
-			errorCode := r.unPack4() // need a error code -> string map	
-			o.output = CodeToStrings[errorCode]
-			fmt.Println(o.output)
+			errorCode := r.unPack4()
+			o.Output = CodeToStrings[errorCode]
+			fmt.Println(o.Output)
 			break
+
 		case OUTPUT_NO_PARSE:
 			size := r.unPack4()
 			data := r.unPackBytes(size)
-			o.output = string(data)
-			fmt.Println(o.output)
+			o.Output = string(data)
+			fmt.Println(o.Output)
 			break
 
-		// case OUTPUT_NEEDS_PARSE:
-		// 	ParseID := r.unPack4()
-			// call into o.output = parsers.Parse(ParseID)
-			//break
-			
 		}
-		
 
 		outputs = append(outputs, o)
 	}
 
-	return Output{Total: len(outputs), Outputs: outputs}, nil
-
+	return Output{Total: len(outputs), Outputs: outputs, AgentID: agentID, TotalSize: body.Size()}, nil
 
 }

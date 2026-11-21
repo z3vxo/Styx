@@ -12,9 +12,12 @@ const (
 var CodeToStrings = map[int32]string{
 	0xb1: "MODULE: Agent succesfully loaded module",
 	0xb5: "MODULE: Agent succesfully unloaded module",
-	10:   "MODULE: Agent already has module loaded.",
-	11:   "MODULE: Agent failed to load module.",
-	12:   "MODULE: Agent does not have module loaded.",
-	13:   "MODULE: Agent failed to unload module.",
-	20:   "CAT: Provided path is not a file.",
+
+	0xd1: "CD: Agent succesfully changed directorys",
+
+	10: "MODULE: Agent already has module loaded.",
+	11: "MODULE: Agent failed to load module.",
+	12: "MODULE: Agent does not have module loaded.",
+	13: "MODULE: Agent failed to unload module.",
+	20: "CAT: Provided path is not a file.",
 }

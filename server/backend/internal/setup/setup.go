@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
@@ -75,11 +76,14 @@ func Run() (*sql.DB, error) {
 
 	modulesPath := filepath.Join(baseDir, "modules", "modules.json")
 	if _, err := os.Stat(modulesPath); errors.Is(err, os.ErrNotExist) {
-		data, err := json.MarshalIndent(modules.Default().Modules, "", "  ")
-		if err != nil {
+		var data bytes.Buffer
+		encoder := json.NewEncoder(&data)
+		encoder.SetEscapeHTML(false)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(modules.Default().Modules); err != nil {
 			return nil, err
 		}
-		if err := os.WriteFile(modulesPath, data, 0644); err != nil {
+		if err := os.WriteFile(modulesPath, data.Bytes(), 0644); err != nil {
 			return nil, err
 		}
 		if os.Geteuid() == 0 {

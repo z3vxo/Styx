@@ -7,7 +7,9 @@ type EventType string
 
 const (
 	// NewAgent is broadcast when an agent registers.
-	NewAgent EventType = "agent.New"
+	NewAgent   EventType = "agent.New"
+	TaskOutput EventType = "task.Output"
+	ErrorMsg   EventType = "error.Msg"
 )
 
 // WSEvent is the envelope sent to dashboard connections.

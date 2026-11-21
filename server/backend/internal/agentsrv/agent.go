@@ -99,14 +99,14 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = agent.Ws.SendNewAgent(NewAgent{
+		err = agent.Ws.SendWsMessage(NewAgent{
 			CampaignID: campaignID,
 			Name:       client.Name,
 			ClientID:   client.ID,
 			Hostname:   client.Hostname,
 			Domain:     client.Domain,
 			CreatedAt:  client.CreatedAt,
-		})
+		}, ws.NewAgent)
 		if err != nil {
 			fmt.Println("[!] Failed sending new agent event:", err)
 		}
@@ -127,10 +127,16 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 		w.Write(packager.PackTasks(tasks))
 		return
 
-	 case MSG_OUTPUT:
-	 	_, _ = packager.ParseAgentOutput(reader)
-	 	w.WriteHeader(http.StatusOK)
-	 	return
+	case MSG_OUTPUT:
+		data, err := packager.ParseAgentOutput(reader, AgentID)
+		if err != nil {
+			agent.Ws.SendWsMessage(ErrorMsg{Msg: "[!] Server Failed too Parse output"}, ws.ErrorMsg)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		agent.Ws.SendWsMessage(data, ws.TaskOutput)
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 
 }

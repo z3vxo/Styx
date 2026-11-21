@@ -16,8 +16,6 @@ import (
 
 const writeTimeout = 5 * time.Second
 
-// WS tracks dashboard WebSocket connections. Connections are not scoped to an
-// agent; every authenticated dashboard tab receives registration events.
 type WS struct {
 	auth  *authmgr.Auth
 	mu    sync.Mutex
@@ -40,16 +38,12 @@ func (ws *WS) remove(conn *websocket.Conn) {
 	delete(ws.conns, conn)
 }
 
-// SendNewAgent broadcasts an agent registration to every dashboard tab.
-func (ws *WS) SendNewAgent(agent any) error {
-	body, err := json.Marshal(agent)
+func (ws *WS) SendWsMessage(wsBody any, Event EventType) error {
+	body, err := json.Marshal(wsBody)
 	if err != nil {
 		return err
 	}
-	event, err := json.Marshal(WSEvent{Event: NewAgent, MessageID: uuid.NewString(), Body: body})
-	if err != nil {
-		return err
-	}
+	event, err := json.Marshal(WSEvent{Event: Event, MessageID: uuid.NewString(), Body: body})
 
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
@@ -59,11 +53,35 @@ func (ws *WS) SendNewAgent(agent any) error {
 		cancel()
 		if err != nil {
 			delete(ws.conns, conn)
-			_ = conn.Close(websocket.StatusInternalError, "send failed")
+			_ = conn.Close(websocket.StatusInternalError, "send failure")
 		}
 	}
 	return nil
 }
+
+// func (ws *WS) SendNewAgent(agent any) error {
+// 	body, err := json.Marshal(agent)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	event, err := json.Marshal(WSEvent{Event: NewAgent, MessageID: uuid.NewString(), Body: body})
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	ws.mu.Lock()
+// 	defer ws.mu.Unlock()
+// 	for conn := range ws.conns {
+// 		writeCtx, cancel := context.WithTimeout(context.Background(), writeTimeout)
+// 		err := conn.Write(writeCtx, websocket.MessageText, event)
+// 		cancel()
+// 		if err != nil {
+// 			delete(ws.conns, conn)
+// 			_ = conn.Close(websocket.StatusInternalError, "send failed")
+// 		}
+// 	}
+// 	return nil
+// }
 
 func (ws *WS) HandleWS(w http.ResponseWriter, r *http.Request) {
 	if _, err := ws.auth.Verify(accessToken(r)); err != nil {

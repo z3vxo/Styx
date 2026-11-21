@@ -119,6 +119,13 @@ func Default() *Registry {
 						{Name: "dst", Type: "string", Required: true},
 					},
 				},
+				"cd": {
+					Code:  6,
+					Usage: "cd <path>",
+					Args: []CommandArg{
+						{Name: "path", Type: "string", Required: true},
+					},
+				},
 			},
 		},
 	}}

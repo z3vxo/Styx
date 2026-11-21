@@ -3,6 +3,7 @@ import mark from './mark.svg';
 import { CampaignProvider, useCampaign } from './CampaignContext.jsx';
 import { AgentSocketProvider, useAgentSocket } from './AgentSocketContext.jsx';
 import { FilesView } from './FilesView.jsx';
+import { split } from 'shlex';
 import { authFetch } from './authFetch.js';
 
 function CampaignPicker() {
@@ -131,17 +132,48 @@ function newEntryId() {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function ShellPanel({ client, onClose }) {
+function formatAgentOutput(output) {
+  const size = Number.isFinite(output.total_size) ? output.total_size : 0;
+  const lines = [`[+] Agent called back, sent ${size} bytes`, ''];
+  for (const entry of output.outputs ?? []) {
+    lines.push(`[*] Output from task ${entry?.task_id ?? 'unknown'}`);
+    if (typeof entry?.output_string === 'string') lines.push(entry.output_string);
+    lines.push('');
+  }
+  return lines.join('\n').trimEnd();
+}
+
+function ShellPanel({ shell, onClose }) {
   const { currentCampaignId } = useCampaign();
+  const { outputsByAgent } = useAgentSocket();
+  const client = shell.client;
+  const agentId = shell.agentId;
   const [command, setCommand] = useState('');
   const [entries, setEntries] = useState([]);
   const outputRef = useRef(null);
   const taskRequestsRef = useRef(new Set());
+  const seenOutputsRef = useRef(null);
 
   useEffect(() => () => {
     for (const request of taskRequestsRef.current) request.abort();
     taskRequestsRef.current.clear();
   }, []);
+
+  useEffect(() => {
+    const outputs = outputsByAgent[agentId] ?? [];
+    if (seenOutputsRef.current === null) {
+      seenOutputsRef.current = new Set(outputs.map(output => output.messageId));
+      return;
+    }
+    const unseen = outputs.filter(output => !seenOutputsRef.current.has(output.messageId));
+    if (unseen.length === 0) return;
+    for (const output of unseen) seenOutputsRef.current.add(output.messageId);
+    setEntries(previous => [...previous, ...unseen.map(output => ({
+      id: output.messageId || newEntryId(),
+      command: null,
+      response: formatAgentOutput(output),
+    }))]);
+  }, [outputsByAgent, agentId]);
 
   useEffect(() => {
     if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
@@ -150,8 +182,19 @@ function ShellPanel({ client, onClose }) {
     event.preventDefault();
     const value = command.trim();
     if (!value) return;
-    const [cmd, ...args] = value.split(/\s+/);
     const entryId = newEntryId();
+    let tokens;
+    try {
+      tokens = split(value);
+    } catch (error) {
+      setEntries(previous => [...previous, { id: entryId, command: value, response: error instanceof Error ? error.message : 'Invalid command.' }]);
+      return;
+    }
+    const [cmd, ...args] = tokens;
+    if (!cmd) {
+      setEntries(previous => [...previous, { id: entryId, command: value, response: 'Enter a command.' }]);
+      return;
+    }
     const controller = new AbortController();
     taskRequestsRef.current.add(controller);
     setEntries(previous => [...previous, { id: entryId, command: value, response: 'Creating task…' }]);
@@ -183,7 +226,7 @@ function ShellPanel({ client, onClose }) {
     <div className="shell-output" ref={outputRef} role="log" aria-live="polite" aria-label="Shell output">
       {entries.length === 0 && <p className="shell-placeholder">Command output will appear here.</p>}
       {entries.map(entry => <div className="shell-entry" key={entry.id}>
-        <div><span className="shell-prompt" aria-hidden="true">$</span> {entry.command}</div>
+        {entry.command != null && <div><span className="shell-prompt" aria-hidden="true">$</span> {entry.command}</div>}
         <p>{entry.response}</p>
       </div>)}
     </div>
@@ -195,14 +238,18 @@ function ShellPanel({ client, onClose }) {
 
 function DashboardWorkspace() {
   const { currentCampaignId } = useCampaign();
-  const [selectedClient, setSelectedClient] = useState(null);
+  const [shell, setShell] = useState(null);
   const [shellShare, setShellShare] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
   const contentRef = useRef(null);
   const resizingRef = useRef(false);
-  const activeClient = selectedClient?.campaignId === currentCampaignId ? selectedClient : null;
+  const activeShell = shell?.campaignId === currentCampaignId ? shell : null;
 
-  useEffect(() => { setSelectedClient(null); }, [currentCampaignId]);
+  useEffect(() => { setShell(null); }, [currentCampaignId]);
+
+  function openShell(client) {
+    setShell({ id: newEntryId(), agentId: client.client_id, campaignId: currentCampaignId, client });
+  }
 
   function resizeAt(clientY) {
     const rect = contentRef.current?.getBoundingClientRect();
@@ -220,14 +267,14 @@ function DashboardWorkspace() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  return <main ref={contentRef} className={`dashboard-content${activeClient ? ' has-shell' : ''}${isResizing ? ' is-resizing' : ''}`} style={{ '--shell-share': `${shellShare}%` }} aria-label="Dashboard">
-    <UsersPanel selectedClientId={activeClient?.client_id} onSelectClient={client => setSelectedClient({ ...client, campaignId: currentCampaignId })} />
-    {activeClient && <>
+  return <main ref={contentRef} className={`dashboard-content${activeShell ? ' has-shell' : ''}${isResizing ? ' is-resizing' : ''}`} style={{ '--shell-share': `${shellShare}%` }} aria-label="Dashboard">
+    <UsersPanel selectedClientId={activeShell?.agentId} onSelectClient={openShell} />
+    {activeShell && <>
       <div className="shell-resizer" role="separator" aria-label="Resize command panel" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={80} aria-valuenow={Math.round(shellShare)} tabIndex={0}
         onPointerDown={event => { event.preventDefault(); resizingRef.current = true; setIsResizing(true); event.currentTarget.setPointerCapture(event.pointerId); resizeAt(event.clientY); }}
         onPointerMove={event => { if (resizingRef.current) resizeAt(event.clientY); }} onPointerUp={stopResize} onPointerCancel={stopResize}
         onKeyDown={event => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); setShellShare(value => Math.max(15, Math.min(80, value + (event.key === 'ArrowUp' ? 5 : -5)))); } }} />
-      <ShellPanel key={`${currentCampaignId}:${activeClient.client_id}`} client={activeClient} onClose={() => setSelectedClient(null)} />
+      <ShellPanel key={activeShell.id} shell={activeShell} onClose={() => setShell(null)} />
     </>}
   </main>;
 }

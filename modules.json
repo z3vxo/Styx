@@ -39,6 +39,13 @@
           { "name": "src", "type": "string", "required": true },
           { "name": "dst", "type": "string", "required": true }
         ]
+      },
+      "cd": {
+        "code": 6,
+        "usage": "cd <path>",
+        "args": [
+          { "name": "path", "type": "string", "required": true }
+        ]
       }
     }
   }
