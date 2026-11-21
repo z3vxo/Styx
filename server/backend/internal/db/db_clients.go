@@ -34,6 +34,7 @@ func (db *DB) ListClients(id string) (*Clients, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	var clients []Client
 
@@ -46,7 +47,7 @@ func (db *DB) ListClients(id string) (*Clients, error) {
 		clients = append(clients, c)
 	}
 
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 

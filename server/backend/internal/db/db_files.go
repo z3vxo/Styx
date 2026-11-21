@@ -42,6 +42,7 @@ func (db *DB) ListUploads(id string) (*Files, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	var files []File
 	for rows.Next() {
@@ -52,7 +53,7 @@ func (db *DB) ListUploads(id string) (*Files, error) {
 		files = append(files, f)
 	}
 
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
