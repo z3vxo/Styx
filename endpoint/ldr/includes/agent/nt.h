@@ -234,6 +234,18 @@ extern "C" {
             PVOID BaseAddress,
             SIZE_T RegionSize
     );
+
+    NTSYSCALLAPI NTSTATUS NTAPI RtlExitUserProcess(
+        NTSTATUS status
+    );
+    NTSYSCALLAPI NTSTATUS NTAPI RtlExitUserThread(
+        NTSTATUS status
+    );
+
+    NTSYSCALLAPI NTSTATUS NTAPI NtUnmapViewOfSection(
+        HANDLE hProcess,
+        PVOID BaseAddress
+    );
 }
 
 

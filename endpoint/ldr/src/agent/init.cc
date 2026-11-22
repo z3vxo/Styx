@@ -80,8 +80,11 @@ BOOL Kratos::LoadApis( ) {
 		this->apis.NtQueryInformationProcess = ( decltype ( this->apis.NtQueryInformationProcess ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtQueryInformationProcess" ) );
 		this->apis.NtCreateSection           = ( decltype ( this->apis.NtCreateSection           ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtCreateSection"           ) );
 		this->apis.NtMapViewOfSection        = ( decltype ( this->apis.NtMapViewOfSection        ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtMapViewOfSection"        ) );
+		this->apis.NtUnmapViewOfSection      = ( decltype ( this->apis.NtUnmapViewOfSection      ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtUnmapViewOfSection"      ) );
 		this->apis.NtProtectVirtualMemory    = ( decltype ( this->apis.NtProtectVirtualMemory    ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtProtectVirtualMemory"    ) );
 		this->apis.NtFlushInstructionCache   = ( decltype ( this ->apis.NtFlushInstructionCache  ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "NtFlushInstructionCache"   ) );
+		this->apis.RtlExitUserProcess        = ( decltype ( this->apis.RtlExitUserProcess        ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "RtlExitUserProcess"        ) );
+		this->apis.RtlExitUserThread        = ( decltype ( this->apis.RtlExitUserThread        ) )api::GetProcAddress( this->dlls.ntdll, HASH_STRA( "RtlExitUserThread"         ) );
 	}
 	else { return FALSE; }
 

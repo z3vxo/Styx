@@ -26,8 +26,11 @@ type NewAgent struct {
 	CampaignID string `json:"campaign_id"`
 	Name       string `json:"name"`
 	ClientID   int32  `json:"client_id"`
+	Username   string `json:"username"`
 	Hostname   string `json:"hostname"`
 	Domain     string `json:"domain"`
+	Country    string `json:"country"`
+	IsAdmin    bool   `json:"is_admin"`
 	CreatedAt  string `json:"created_at"`
 }
 
@@ -103,8 +106,11 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 			CampaignID: campaignID,
 			Name:       client.Name,
 			ClientID:   client.ID,
+			Username:   client.Username,
 			Hostname:   client.Hostname,
 			Domain:     client.Domain,
+			Country:    client.Country,
+			IsAdmin:    client.IsAdmin,
 			CreatedAt:  client.CreatedAt,
 		}, ws.NewAgent)
 		if err != nil {
@@ -128,7 +134,7 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case MSG_OUTPUT:
-		data, err := packager.ParseAgentOutput(reader, AgentID)
+		data, err := packager.ParseAgentOutput(reader, AgentID, agent.modules)
 		if err != nil {
 			agent.Ws.SendWsMessage(ErrorMsg{Msg: "[!] Server Failed too Parse output"}, ws.ErrorMsg)
 			w.WriteHeader(http.StatusOK)

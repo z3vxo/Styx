@@ -38,6 +38,7 @@ public:
 	BOOL Post( PBYTE data, SIZE_T DataSize );
 	PBYTE Data( );
 	SIZE_T DataSize( );
+	void Cleanup();
 };
 
 

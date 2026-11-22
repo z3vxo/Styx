@@ -34,6 +34,7 @@ var taskWireCodes = map[string]int32{
 	"list-modules":  0xb2,
 	"run-command":   0xb3,
 	"unload-module": 0xb4,
+	"exit-agent":    0xb5,
 }
 
 func PackTasks(tasks []TaskRecord) []byte {
@@ -57,6 +58,8 @@ func PackTasks(tasks []TaskRecord) []byte {
 			w.Pack4(task.ModuleID)
 			w.Pack4(task.Code)
 			writeArgs(w, task.Args)
+		case "exit-agent":
+			w.Pack4(task.Code)
 		}
 	}
 	return w.Bytes()

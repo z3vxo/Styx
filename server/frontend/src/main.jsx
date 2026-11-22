@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import mark from './mark.svg';
+import 'country-flag-icons/3x2/flags.css';
 import './styles.css';
 import { Dashboard } from './Dashboard.jsx';
 

@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"strings"
+	"styx/internal/modules"
 )
 
 type AgentRegister struct {
@@ -101,15 +103,21 @@ func ParseRegister(body *bytes.Reader) (AgentRegister, error) {
 	}
 	Agent.IsAdmin = r.unPack4()
 	UserLen := r.unPack4()
-	Agent.Username = string(r.unPackBytes(UserLen))
+	Agent.Username = trimString(r.unPackBytes(UserLen))
 	HostLen := r.unPack4()
-	Agent.Hostname = string(r.unPackBytes(HostLen))
+	Agent.Hostname = trimString(r.unPackBytes(HostLen))
 	DomainLen := r.unPack4()
-	Agent.Domain = string(r.unPackBytes(DomainLen))
+	Agent.Domain = trimString(r.unPackBytes(DomainLen))
 	CountryLen := r.unPack4()
-	Agent.Country = string(r.unPackBytes(CountryLen))
+	Agent.Country = trimString(r.unPackBytes(CountryLen))
 
 	return Agent, r.err
+}
+
+// trimString removes the trailing NUL that PackWideBytes includes when it
+// encodes a wide string for registration.
+func trimString(value []byte) string {
+	return strings.TrimRight(string(value), "\x00")
 }
 
 type TaskOutputs struct {
@@ -124,7 +132,7 @@ type Output struct {
 	TotalSize int64         `json:"total_size"`
 }
 
-func ParseAgentOutput(body *bytes.Reader, agentID int32) (Output, error) {
+func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules.Registry) (Output, error) {
 
 	r := &Reader{r: body}
 
@@ -150,6 +158,21 @@ func ParseAgentOutput(body *bytes.Reader, agentID int32) (Output, error) {
 			size := r.unPack4()
 			data := r.unPackBytes(size)
 			o.Output = string(data)
+			fmt.Println(o.Output)
+			break
+
+		case OUTPUT_NEEDS_PARSE:
+			parseID := r.unPack4()
+			switch parseID {
+			case PARSE_MODULE_BITS:
+				if moduleRegistry == nil {
+					o.Output = "[!] Module registry unavailable"
+					break
+				}
+				o.Output = moduleRegistry.ParseModuleBits(r.unPack8())
+			default:
+				o.Output = fmt.Sprintf("[!] Unknown parser id %d", parseID)
+			}
 			fmt.Println(o.Output)
 			break
 

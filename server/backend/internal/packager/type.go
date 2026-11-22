@@ -7,6 +7,11 @@ const (
 	OUTPUT_ERROR       = 0xc4
 
 	END_SIG = 0xFFFFFFFF
+
+	PARSE_MODULE_BITS = 101
+
+	EXIT_PROCESS = 0xf1
+	EXIT_THREAD  = 0xf2
 )
 
 var CodeToStrings = map[int32]string{

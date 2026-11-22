@@ -104,8 +104,14 @@ footer { padding: 24px 40px; display: flex; justify-content: space-between; gap:
 .user-row:hover { background: var(--surface); }
 .user-row[data-selected="true"] { background: var(--raised); }
 .user-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.users-table th:nth-child(2), .users-table td:nth-child(2) { width: 160px; }
-.users-table th:last-child, .users-table td:last-child { width: 170px; }
+.users-table th:nth-child(2), .users-table td:nth-child(2) { width: 170px; }
+.users-table th:nth-child(3), .users-table td:nth-child(3) { width: 190px; }
+.users-table th:nth-child(5), .users-table td:nth-child(5) { width: 95px; text-align: center; }
+.users-table th:nth-child(6), .users-table td:nth-child(6) { width: 210px; }
+.admin-cell { color: var(--muted); font-size: 16px; font-weight: 600; }
+.admin-cell.is-admin { color: var(--accent); }
+.country-cell { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.country-flag { --CountryFlagIcon-height: 14px; flex: none; border-radius: 2px; outline: 1px solid #ffffff14; }
 .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 14px !important; }
 .shell-resizer { display: grid; place-items: center; height: 10px; border-top: 1px solid #353a39; border-bottom: 1px solid #353a39; cursor: row-resize; touch-action: none; }
 .shell-resizer::after { content: ''; display: block; width: 42px; height: 2px; border-radius: 2px; background: var(--border); }

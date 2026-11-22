@@ -6,9 +6,22 @@ void Entry( ) {
 #ifdef DEBUG
 	AllocConsole( );
 #endif
-	Kratos K = { 0 };
+	HMODULE Kernel32 = api::GetModule( HASH_STRW( L"KERNEL32.DLL" ) );
+	if ( ! Kernel32 ) {
+		return;
+	}
 
-	kratos = &K;
+	auto LocalAllocFn = ( decltype( &LocalAlloc ) ) api::GetProcAddress( Kernel32, HASH_STRA( "LocalAlloc" ) );
+	if ( ! LocalAllocFn ) {
+		return;
+	}
+
+	Kratos* K = ( Kratos* ) LocalAllocFn( ALLOC_ARGS, sizeof( Kratos ) );
+	if ( ! K ) {
+		return;
+	}
+
+	kratos = K;
 
 	DEBUG_LOG("[*] Kratos Started");
 

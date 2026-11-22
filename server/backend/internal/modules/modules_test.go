@@ -70,3 +70,17 @@ func TestNewFallsBackWithoutRegistryFile(t *testing.T) {
 		t.Fatal("default registry not loaded")
 	}
 }
+
+func TestParseModuleBitsListsLoadedState(t *testing.T) {
+	registry := &Registry{Modules: map[string]Modules{
+		"second": {ID: 2},
+		"first":  {ID: 1},
+		"third":  {ID: 3},
+	}}
+
+	got := registry.ParseModuleBits(1<<1 | 1<<3)
+	want := "[*] first: loaded\n[*] second: unloaded\n[*] third: loaded"
+	if got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+}

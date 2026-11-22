@@ -5,6 +5,50 @@ import { AgentSocketProvider, useAgentSocket } from './AgentSocketContext.jsx';
 import { FilesView } from './FilesView.jsx';
 import { split } from 'shlex';
 import { authFetch } from './authFetch.js';
+import { hasFlag } from 'country-flag-icons';
+
+const regionNames = (() => {
+  try {
+    return new Intl.DisplayNames(undefined, { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+
+function countryLabel(code) {
+  if (!code) return '—';
+  try {
+    return regionNames?.of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+function cleanText(value) {
+  return typeof value === 'string' ? value.replace(/\0/g, '') : '';
+}
+
+function cleanClient(client) {
+  return {
+    ...client,
+    name: cleanText(client.name),
+    username: cleanText(client.username),
+    hostname: cleanText(client.hostname),
+    domain: cleanText(client.domain),
+    country: cleanText(client.country),
+  };
+}
+
+function CountryCell({ code }) {
+  const country = cleanText(code).trim().toUpperCase();
+  if (!country) return <span>—</span>;
+  const label = countryLabel(country);
+  if (!hasFlag(country)) return <span>{label}</span>;
+  return <span className="country-cell" title={label}>
+    <span className={`flag:${country} country-flag`} aria-hidden="true" />
+    <span>{label}</span>
+  </span>;
+}
 
 function CampaignPicker() {
   const { campaigns, currentCampaignId, selectCampaign, status, retry } = useCampaign();
@@ -84,7 +128,7 @@ function UsersPanel({ onSelectClient, selectedClientId }) {
         const data = await response.json();
         if (!data || (data.clients !== null && !Array.isArray(data.clients))) throw new Error('Invalid client list');
         if (!controller.signal.aborted) {
-          setClients(data.clients ?? []);
+          setClients((data.clients ?? []).map(cleanClient));
           setStatus('ready');
         }
       } catch {
@@ -113,13 +157,14 @@ function UsersPanel({ onSelectClient, selectedClientId }) {
       {displayStatus === 'error' && <p className="panel-empty">Could not load clients. <button className="text-action" type="button" onClick={() => setAttempt(n => n + 1)}>Retry</button></p>}
       {displayStatus === 'ready' && clients.length === 0 && <p className="panel-empty">No clients in this campaign yet.</p>}
       {displayStatus === 'ready' && clients.length > 0 && <div className="users-table-wrap"><table className="users-table">
-        <thead><tr><th>Name</th><th>Client ID</th><th>Hostname</th><th>Domain</th><th>Added</th></tr></thead>
+        <thead><tr><th>Codename</th><th>Username</th><th>Hostname</th><th>Domain</th><th>IsAdmin</th><th>Country</th></tr></thead>
         <tbody>{clients.map((client, index) => <tr key={`${client.client_id}-${index}`} className="user-row" data-selected={client.client_id === selectedClientId} tabIndex={0} title="Double-click to open command panel" onDoubleClick={() => onSelectClient(client)} onKeyDown={event => { if (event.key === 'Enter') onSelectClient(client); }}>
           <td className="user-name">{client.name || '—'}</td>
-          <td className="mono">{client.client_id ?? '—'}</td>
+          <td>{client.username || '—'}</td>
           <td className="mono">{client.hostname || '—'}</td>
           <td>{client.domain || '—'}</td>
-          <td>{client.created_at && !Number.isNaN(Date.parse(client.created_at)) ? new Date(client.created_at).toLocaleDateString() : '—'}</td>
+          <td className={`admin-cell${client.is_admin ? ' is-admin' : ''}`} aria-label={client.is_admin ? 'Administrator' : 'Not administrator'}>{client.is_admin ? '✓' : '✕'}</td>
+          <td><CountryCell code={client.country} /></td>
         </tr>)}</tbody>
       </table></div>}
     </div>

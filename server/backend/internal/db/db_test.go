@@ -241,3 +241,77 @@ func TestSetupMigratesLegacyTasks(t *testing.T) {
 		t.Fatal("Kind column missing")
 	}
 }
+
+func TestSetupMigratesTasksForExitAgent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "styx.db")
+	old, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = old.Exec(`CREATE TABLE tasks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		TaskID INTEGER NOT NULL UNIQUE,
+		ClientID INTEGER NOT NULL,
+		CampaignID TEXT NOT NULL,
+		Kind TEXT NOT NULL CHECK (Kind IN ('load-module','unload-module','list-modules','run-command')),
+		Module TEXT,
+		ModuleID INTEGER,
+		Command TEXT,
+		Code INTEGER,
+		Args TEXT NOT NULL CHECK (json_valid(Args)),
+		Status TEXT NOT NULL DEFAULT 'pending' CHECK (Status IN ('pending','sent','done','failed')),
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		sent_at DATETIME,
+		completed_at DATETIME
+	)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := old.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	conn, err := Setup(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	code := int32(0xf2)
+	if _, err := (&DB{conn: conn}).InsertTask(NewTaskReq{
+		Cmd: "exit", ClientID: 1, CampaignID: "campaign-a", Kind: "exit-agent", Code: &code,
+	}); err != nil {
+		t.Fatalf("insert exit-agent after migration: %v", err)
+	}
+}
+
+func TestListClientsIncludesProfileFields(t *testing.T) {
+	conn, err := Setup(filepath.Join(t.TempDir(), "styx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	if _, err := conn.Exec(`INSERT INTO campaigns (Name, uuid) VALUES (?, ?)`, "campaign-a", "campaign-a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(`INSERT INTO clients
+		(ClientName, ClientID, IsAdmin, Pid, PPid, CampaignUUID, Hostname, Username, Domain, Country, Arch)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"Nyx-Tartarus", 42, 1, 100, 50, "campaign-a", "host-a\x00", "alice\x00", "example.com\x00", "US\x00", "x64"); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := (&DB{conn: conn}).ListClients("campaign-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Total != 1 || len(result.Entrys) != 1 {
+		t.Fatalf("clients = %+v", result)
+	}
+	client := result.Entrys[0]
+	if client.Name != "Nyx-Tartarus" || client.Username != "alice" || client.Hostname != "host-a" ||
+		client.Domain != "example.com" || client.Country != "US" || !client.IsAdmin {
+		t.Fatalf("client = %+v", client)
+	}
+}

@@ -5,6 +5,7 @@ import (
 
 	"styx/internal/db"
 	"styx/internal/modules"
+	"styx/internal/packager"
 )
 
 func TestResolveBuiltinsAndModuleCommands(t *testing.T) {
@@ -103,5 +104,39 @@ func TestResolveValidatesArguments(t *testing.T) {
 	seek := db.NewTaskReq{Cmd: "seek", Args: []db.Arg{{Type: "int32", Value: float64(1)}}}
 	if err := intAPI.resolve(&seek); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestResolveExitAgent(t *testing.T) {
+	api := &API{modules: modules.Default()}
+
+	for _, tc := range []struct {
+		target string
+		code   int32
+	}{
+		{"process", packager.EXIT_PROCESS},
+		{"thread", packager.EXIT_THREAD},
+		{"PROCESS", packager.EXIT_PROCESS},
+	} {
+		req := db.NewTaskReq{Cmd: "exit", Args: []db.Arg{{Type: "string", Value: tc.target}}}
+		if err := api.resolve(&req); err != nil {
+			t.Fatal(err)
+		}
+		if req.Kind != "exit-agent" || req.Code == nil || *req.Code != tc.code {
+			t.Fatalf("%q resolved to %+v", tc.target, req)
+		}
+	}
+
+	for _, args := range [][]db.Arg{
+		nil,
+		{{Type: "string", Value: "thread"}, {Type: "string", Value: "process"}},
+		{{Type: "string", Value: "sideways"}},
+		{{Type: "string", Value: ""}},
+		{{Type: "int32", Value: 1}},
+	} {
+		req := db.NewTaskReq{Cmd: "exit", Args: args}
+		if err := api.resolve(&req); err == nil {
+			t.Fatalf("exit accepted invalid args %+v", args)
+		}
 	}
 }

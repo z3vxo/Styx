@@ -123,3 +123,29 @@ func TestGetTasksReturnsAndMarksSent(t *testing.T) {
 		t.Fatalf("other client tasks = %+v", other)
 	}
 }
+
+func TestInsertExitAgentTask(t *testing.T) {
+	conn, err := Setup(filepath.Join(t.TempDir(), "styx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	database := &DB{conn: conn}
+
+	code := int32(0xf1)
+	taskID, err := database.InsertTask(NewTaskReq{
+		Cmd: "exit", ClientID: 42, CampaignID: "campaign-a", Kind: "exit-agent", Code: &code,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var kind string
+	var gotCode int32
+	if err := conn.QueryRow(`SELECT Kind, Code FROM tasks WHERE TaskID = ?`, taskID).Scan(&kind, &gotCode); err != nil {
+		t.Fatal(err)
+	}
+	if kind != "exit-agent" || gotCode != code {
+		t.Fatalf("task = %q/%#x, want exit-agent/%#x", kind, gotCode, code)
+	}
+}

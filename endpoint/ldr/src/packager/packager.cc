@@ -3,6 +3,22 @@
 #include "packager/packager.h"
 
 
+void Packager::Cleanup() {
+	this->ReadBuf = NULL;
+	this->ReadBufSize = 0;
+	this->ReadIndex = 0;
+
+	PBYTE write = this->WriteBuf;
+	this->WriteBuf = NULL;
+	this->WriteSize = 0;
+	this->WriteIndex = 0;
+
+	Packager* self = this;
+	packager = NULL;
+	kratos->apis.LocalFree( write );
+	kratos->apis.LocalFree( self );
+	return;
+}
 
 
 BOOL Packager::NewUnPacker(PBYTE Data, SIZE_T size) {
@@ -103,16 +119,20 @@ BOOL Packager::PackBytes( PBYTE in, INT32 n ) {
 }
 
 BOOL Packager::PackWideBytes( PWSTR str ) {
-	if ( ! str ) { return FALSE; }
+	if ( ! str ) { return this->Pack4( 0 ); }
 	INT needed = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, str, -1, NULL, 0, NULL, NULL );
-	if ( needed == 0 ) { return FALSE; }
+	if ( needed == 0 ) { return this->Pack4( 0 ); }
 	PBYTE buf = (PBYTE)kratos->apis.LocalAlloc( LMEM_FIXED | LMEM_ZEROINIT, needed );
 	if ( !buf ) { return FALSE; }
 	INT Written = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, str, -1, ( PSTR )buf, needed, NULL, NULL );
 	BOOL res = FALSE;
 	if (Written != 0) {
-		this->Pack4(Written);
-		res = this->PackBytes( buf, Written );
+		// Exclude the UTF-8 NUL: registration strings are length-prefixed.
+		INT32 size = Written - 1;
+		this->Pack4(size);
+		res = this->PackBytes( buf, size );
+	} else {
+		res = this->Pack4( 0 );
 	}
 	kratos->apis.LocalFree( buf );
 	return res;

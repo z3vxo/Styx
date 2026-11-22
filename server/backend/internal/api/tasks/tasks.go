@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	authmgr "styx/internal/auth"
 	"styx/internal/db"
 	"styx/internal/modules"
+	"styx/internal/packager"
 
 	"github.com/go-chi/chi"
 )
@@ -44,7 +46,7 @@ func (a *API) NewTask(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Kind == "help" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"help": "help, load-module <name>, unload-module <name>, list-modules, run-command <module> <command> [args]"})
+		json.NewEncoder(w).Encode(map[string]string{"help": "help, load-module <name>, unload-module <name>, list-modules, run-command <module> <command> [args], exit <thread|process>"})
 		return
 	}
 
@@ -83,6 +85,25 @@ func (a *API) resolve(req *db.NewTaskReq) error {
 			return fmt.Errorf("list-modules takes no arguments")
 		}
 		req.Kind = "list-modules"
+	case "exit":
+		if len(req.Args) != 1 {
+			return fmt.Errorf("exit requires exactly one argument: thread or process")
+		}
+		target, ok := stringArg(req.Args, 0)
+		if !ok {
+			return fmt.Errorf("exit requires thread or process")
+		}
+		var exitType int32
+		switch strings.ToLower(target) {
+		case "process":
+			exitType = packager.EXIT_PROCESS
+		case "thread":
+			exitType = packager.EXIT_THREAD
+		default:
+			return fmt.Errorf("exit target must be thread or process")
+		}
+		req.Kind = "exit-agent"
+		req.Code = &exitType
 	case "run-command":
 		moduleName, ok := stringArg(req.Args, 0)
 		if !ok {

@@ -40,7 +40,6 @@ BOOL Kratos::Run( ) {
 			continue;
 		}
 
-		DEBUG_LOG("[+] Got Tasks!");
 		if ( ! packager->ResetPackerIndex( RequestBase ) ) {
 			return FALSE;
 		}

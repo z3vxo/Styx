@@ -49,12 +49,12 @@ private:
 	BOOL IsStompedDllLoaded;
 	ModuleInformation ModuleInfos[ MAX_MODULES ]{};
 
-
 	PModule ModuleStruct;
 
 	PVOID StompedDllText;
 	SIZE_T StompedDllTextSize;
 	PVOID TextSectionIndex;
+	PVOID MappedOleBaseAddress;
 
 	PVOID ReserveArena( SIZE_T size );
 	void UpdateBitField( INT32 Bit );
@@ -82,6 +82,8 @@ public:
 	BOOL RunModuleCommand( INT32 ModuleBit );
 
 	INT64 GetLoadedModulesBitMap();
+
+	void Cleanup();
 
 };
 

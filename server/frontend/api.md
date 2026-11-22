@@ -57,10 +57,10 @@ Deletes the campaign identified by `id`, its client and upload records, and stor
 Use the selected campaign ID and send `Authorization: Bearer <access>`. Returns HTTP 200:
 
 ```json
-{"total":1,"clients":[{"name":"client-a","client_id":42,"hostname":"host-a","domain":"example.com","created_at":"2026-11-04T18:23:06Z"}]}
+{"total":1,"clients":[{"name":"Nyx-Tartarus","client_id":42,"username":"alice","hostname":"host-a","domain":"example.com","country":"US","is_admin":true,"created_at":"2026-11-04T18:23:06Z"}]}
 ```
 
-When empty, `clients` may be `null`. The dashboard treats it as an empty list and reloads whenever the selected campaign changes.
+`name` is the generated codename. `country` is the agent's `GetUserDefaultGeoName` result, normally an ISO 3166-1 alpha-2 code. `is_admin` is a boolean. When empty, `clients` may be `null`. The dashboard treats it as an empty list and reloads whenever the selected campaign changes.
 
 ## Files
 
@@ -99,7 +99,7 @@ The dashboard opens one connection after login; it is not scoped to a client or 
 Each text message is a JSON envelope:
 
 ```json
-{"event":"agent.New","message_id":"<uuid>","body":{"campaign_id":"<campaign-id>","name":"Nyx-Tartarus","client_id":42,"hostname":"host-a","domain":"example.com","created_at":"2026-11-16 16:20:00"}}
+{"event":"agent.New","message_id":"<uuid>","body":{"campaign_id":"<campaign-id>","name":"Nyx-Tartarus","client_id":42,"username":"alice","hostname":"host-a","domain":"example.com","country":"US","is_admin":true,"created_at":"2026-11-16 16:20:00"}}
 ```
 
 `agent.New` is currently the only event. The dashboard refetches `/rest/clients/list/{campaignID}` when an event matches the selected campaign, so the new client appears without a manual reload. Incoming browser messages are read and discarded. Task output delivery is not connected yet.

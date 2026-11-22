@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 type Registry struct {
@@ -78,6 +80,33 @@ func (mod *Registry) ResolveCommand(name string) (string, Modules, uint32, bool)
 		}
 	}
 	return "", Modules{}, 0, false
+}
+
+// ParseModuleBits renders the agent's loaded-module bitmap as one line per
+// registered module. Bit N is set when module ID N is loaded.
+func (mod *Registry) ParseModuleBits(bits int64) string {
+	names := make([]string, 0, len(mod.Modules))
+	for name := range mod.Modules {
+		names = append(names, name)
+	}
+	sort.Slice(names, func(i, j int) bool {
+		left, right := mod.Modules[names[i]], mod.Modules[names[j]]
+		if left.ID != right.ID {
+			return left.ID < right.ID
+		}
+		return names[i] < names[j]
+	})
+
+	lines := make([]string, 0, len(names))
+	for _, name := range names {
+		module := mod.Modules[name]
+		state := "unloaded"
+		if module.ID < 64 && (uint64(bits)>>module.ID)&1 == 1 {
+			state = "loaded"
+		}
+		lines = append(lines, fmt.Sprintf("[*] %s: %s", name, state))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func Default() *Registry {
