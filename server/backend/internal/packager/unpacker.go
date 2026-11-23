@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 	"styx/internal/modules"
+	"styx/internal/parsers"
 )
 
 type AgentRegister struct {
@@ -132,7 +133,7 @@ type Output struct {
 	TotalSize int64         `json:"total_size"`
 }
 
-func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules.Registry) (Output, error) {
+func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules.Registry, p *parsers.Parser) (Output, error) {
 
 	r := &Reader{r: body}
 
@@ -170,6 +171,8 @@ func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules
 					break
 				}
 				o.Output = moduleRegistry.ParseModuleBits(r.unPack8())
+				o.Output, _ = p.Parse(parseID, r.r)
+
 			default:
 				o.Output = fmt.Sprintf("[!] Unknown parser id %d", parseID)
 			}

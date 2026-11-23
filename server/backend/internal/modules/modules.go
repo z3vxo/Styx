@@ -24,6 +24,7 @@ type Modules struct {
 
 type Command struct {
 	Code        uint32       `json:"code"`
+	ParseID     int32        `json:"parse_id"`
 	Usage       string       `json:"usage,omitempty"`
 	Description string       `json:"description,omitempty"`
 	Args        []CommandArg `json:"args,omitempty"`

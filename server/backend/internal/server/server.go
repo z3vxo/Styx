@@ -13,6 +13,7 @@ import (
 	"styx/internal/cfg"
 	"styx/internal/db"
 	"styx/internal/modules"
+	"styx/internal/parsers"
 	"styx/internal/web"
 	"styx/internal/ws"
 
@@ -49,6 +50,10 @@ func New() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	p, err := parsers.New()
+	if err != nil {
+		return nil, err
+	}
 
 	w := ws.New(a)
 
@@ -63,7 +68,7 @@ func New() (*Server, error) {
 		ClientsAPI:  clients.New(db, a),
 		TasksAPI:    tasks.New(db, a, m),
 		WSHandler:   w,
-		AgentSrv:    agentsrv.New(db, m, w),
+		AgentSrv:    agentsrv.New(db, m, w, p),
 	}, nil
 }
 

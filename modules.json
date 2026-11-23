@@ -7,6 +7,7 @@
     "commands": {
       "ls": {
         "code": 1,
+	"parse_id": 102,
         "usage": "ls [path]",
         "args": [
           { "name": "path", "type": "string", "default": "." }

@@ -1,56 +1,101 @@
 package parsers
 
 import (
-	"github.com/yuin/gopher-lua"
-	"os"
-	"filepath"
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
+const maxReadBytes = 64 << 20
 
-func SetupLuaEnv() (*lua.LState, error) {
-	home, err := os.UserHomeDir()
+func newReaderMetatable(L *lua.LState) *lua.LTable {
+	reader := L.NewTypeMetatable("reader")
+	L.SetField(reader, "__index", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
+		"read4": func(L *lua.LState) int {
+			r := L.CheckUserData(1).Value.(*bytes.Reader)
+			var buf [4]byte
+			if _, err := io.ReadFull(r, buf[:]); err != nil {
+				L.RaiseError("read4: %v", err)
+				return 0
+			}
+			L.Push(lua.LNumber(binary.LittleEndian.Uint32(buf[:])))
+			return 1
+		},
+		"read8": func(L *lua.LState) int {
+			r := L.CheckUserData(1).Value.(*bytes.Reader)
+			var buf [8]byte
+			if _, err := io.ReadFull(r, buf[:]); err != nil {
+				L.RaiseError("read8: %v", err)
+				return 0
+			}
+			L.Push(lua.LNumber(binary.LittleEndian.Uint64(buf[:])))
+			return 1
+		},
+		"readBytes": func(L *lua.LState) int {
+			r := L.CheckUserData(1).Value.(*bytes.Reader)
+			n := L.CheckInt(2)
+			if n < 0 {
+				L.ArgError(2, "must not be negative")
+				return 0
+			}
+			if n > maxReadBytes {
+				L.ArgError(2, "length exceeds limit")
+				return 0
+			}
+			buf := make([]byte, n)
+			if _, err := io.ReadFull(r, buf); err != nil {
+				L.RaiseError("readBytes: %v", err)
+				return 0
+			}
+			L.Push(lua.LString(buf))
+			return 1
+		},
+	}))
+	return reader
+}
+
+func (p *Parser) LoadLuaScript(parseID int32, scriptPath string) error {
+	chunk, err := p.L.LoadFile(scriptPath)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	moduleDir := filepath.Join(home, ".local", "styx", "modules")
+	if err := p.L.CallByParam(lua.P{Fn: chunk, NRet: 1, Protect: true}); err != nil {
+		return err
+	}
+	ret := p.L.Get(-1)
+	p.L.Pop(1)
+	fn, ok := ret.(*lua.LFunction)
+	if !ok {
+		return fmt.Errorf("%s must return a function", scriptPath)
+	}
+	p.parsers[parseID] = fn
+	return nil
+}
 
-	L := lua.NewState()
+func (p *Parser) Parse(parseID int32, data *bytes.Reader) (string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	err := filepath.WalkDir(moduleDir, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if entry.IsDir() || filepath.Ext(path) != ".lua" {
-			return nil
-		}
-
-		rel, err := filepath.Rel(moduleDir, path)
-		if err != nil {
-			return err
-		}
-
-		name := strings.TrimSuffix(rel, ".lua")
-		name = strings.ReplaceAll(name, string(filepath.Separator), ".")
-
-		fn, err := L.LoadFile(path)
-		if err != nil {
-			return err
-		}
-
-		L.PreloadModule(name, func(state *lua.LState) int {
-			state.Push(fn)
-			state.Call(0, 1)
-		})  
-		return nil
-	})
-
-	if err != nil {
-		L.Close()
-		return nil, err
+	fn, ok := p.parsers[parseID]
+	if !ok {
+		return "", fmt.Errorf("unknown parser id %d", parseID)
 	}
 
-	return L, nil
+	ud := p.L.NewUserData()
+	ud.Value = data
+	p.L.SetMetatable(ud, p.mt)
 
-
+	if err := p.L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, ud); err != nil {
+		return "", err
+	}
+	ret := p.L.Get(-1)
+	p.L.Pop(1)
+	output, ok := ret.(lua.LString)
+	if !ok {
+		return "", fmt.Errorf("parser %d returned %s, want string", parseID, ret.Type())
+	}
+	return string(output), nil
 }

@@ -34,7 +34,7 @@ typedef struct {
 #define OUTPUT_SUCCESS 0xc3
 #define OUTPUT_NEEDS_PARSE 0xc2
 #define OUTPUT_NO_PARSE    0xc1
-#define PARSER_LS 1
+#define PARSER_LS 102
 
 constexpr DWORD HasherA(PCHAR str) {
 	UINT32 hash = 5381;
