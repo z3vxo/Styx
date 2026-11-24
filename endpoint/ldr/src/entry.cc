@@ -1,7 +1,6 @@
 #include "agent/core.h"
 
 
-
 void Entry( ) {
 #ifdef DEBUG
 	AllocConsole( );
@@ -29,6 +28,7 @@ void Entry( ) {
 		DEBUG_LOG( "[!] Failed With Kratos->Init" );
 		return;
 	}
+
 
 	if ( ! kratos->Run( ) ) {
 		DEBUG_LOG("[!] Failed Run");

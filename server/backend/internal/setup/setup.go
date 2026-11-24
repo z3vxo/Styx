@@ -58,8 +58,11 @@ func Run() (*sql.DB, error) {
 		"user-files",
 		"modules",
 		"modules/file-system",
+		"modules/file-system/ls",
 		"modules/ad-enum",
 		"modules/pe-loader",
+		"modules/enum",
+		"modules/enum/env",
 	}
 
 	for _, entry := range dirs {

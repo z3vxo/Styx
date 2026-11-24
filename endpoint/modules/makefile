@@ -11,29 +11,31 @@ CXXFLAGS += -std=c++20
 
 LDFLAGS = -Wl,-Tlinker.ld,--no-seh,-e,module_start,--gc-sections,-s
 
-MODULE = file-system
-OUTDIR = output
-TARGET = $(OUTDIR)/$(MODULE).mod
+OUTDIR  = output
+MODULES = $(patsubst %.cc,%,$(wildcard *.cc))
+TARGETS = $(addprefix $(OUTDIR)/,$(addsuffix .mod,$(MODULES)))
 
-all: file-system
+all: $(TARGETS)
 
-file-system: $(TARGET)
+# `make <name>` builds <name>.cc into output/<name>.mod.
+$(MODULES): %: $(OUTDIR)/%.mod
+
+$(OUTDIR)/%.mod: %.cc common.o linker.ld common.h | $(OUTDIR)
+	@echo "[*] Compiling $<..."
+	@$(CXX64) $< common.o -o $*.exe $(CXXFLAGS) $(LDFLAGS)
+	@echo "[*] Extracting .text -> $@"
+	@$(OBJCOPY) -O binary -j .text $*.exe $@
+	@rm -f $*.exe
+
+$(OUTDIR):
+	@mkdir -p $@
 
 common.o: common.asm
-	@ echo "[*] Assembling common stub..."
-	@ $(NASM) -f win64 common.asm -o common.o
-
-# Compile the module and save its raw .text as <module>.mod.
-$(TARGET): $(MODULE).cc common.o linker.ld common.h
-	@ mkdir -p $(OUTDIR)
-	@ echo "[*] Compiling $(MODULE)..."
-	@ $(CXX64) $< common.o -o $(MODULE).exe $(CXXFLAGS) $(LDFLAGS)
-	@ echo "[*] Extracting .text -> $@"
-	@ $(OBJCOPY) -O binary -j .text $(MODULE).exe $@
-	@ rm -f $(MODULE).exe common.o
+	@echo "[*] Assembling common stub..."
+	@$(NASM) -f win64 common.asm -o common.o
 
 clean:
-	@ rm -rf $(OUTDIR)
-	@ rm -f *.o *.exe
+	@rm -rf $(OUTDIR)
+	@rm -f *.o *.exe
 
-.PHONY: all clean file-system
+.PHONY: all clean $(MODULES)

@@ -5,48 +5,100 @@
     "file": "file-system.mod",
     "description": "Local filesystem operations",
     "commands": {
-      "ls": {
-        "code": 1,
-	"parse_id": 102,
-        "usage": "ls [path]",
-        "args": [
-          { "name": "path", "type": "string", "default": "." }
-        ]
-      },
-      "cp": {
-        "code": 2,
-        "usage": "cp <src> <dst>",
-        "args": [
-          { "name": "src", "type": "string", "required": true },
-          { "name": "dst", "type": "string", "required": true }
-        ]
-      },
-      "pwd": {
-        "code": 3,
-        "usage": "pwd",
-        "args": []
-      },
       "cat": {
         "code": 4,
+        "parse_id": 0,
         "usage": "cat <path>",
         "args": [
-          { "name": "path", "type": "string", "required": true }
-        ]
-      },
-      "mv": {
-        "code": 5,
-        "usage": "mv <src> <dst>",
-        "args": [
-          { "name": "src", "type": "string", "required": true },
-          { "name": "dst", "type": "string", "required": true }
+          {
+            "name": "path",
+            "type": "string",
+            "required": true
+          }
         ]
       },
       "cd": {
         "code": 6,
+        "parse_id": 0,
         "usage": "cd <path>",
         "args": [
-          { "name": "path", "type": "string", "required": true }
+          {
+            "name": "path",
+            "type": "string",
+            "required": true
+          }
         ]
+      },
+      "cp": {
+        "code": 2,
+        "parse_id": 0,
+        "usage": "cp <src> <dst>",
+        "args": [
+          {
+            "name": "src",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "dst",
+            "type": "string",
+            "required": true
+          }
+        ]
+      },
+      "ls": {
+        "code": 1,
+        "parse_id": 102,
+        "usage": "ls [path]",
+        "args": [
+          {
+            "name": "path",
+            "type": "string",
+            "default": "."
+          }
+        ]
+      },
+      "mv": {
+        "code": 5,
+        "parse_id": 0,
+        "usage": "mv <src> <dst>",
+        "args": [
+          {
+            "name": "src",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "dst",
+            "type": "string",
+            "required": true
+          }
+        ]
+      },
+      "pwd": {
+        "code": 3,
+        "parse_id": 0,
+        "usage": "pwd"
+      }
+    }
+  },
+  "enum": {
+    "abi": 1,
+    "id": 2,
+    "file": "enum.mod",
+    "description": "Environment enumeration",
+    "commands": {
+      "env": {
+        "code": 1,
+        "parse_id": 201,
+        "usage": "env",
+        "args": []
+      },
+      "whoami": {
+        "code": 2,
+        "parse_id": 202,
+        "usage": "whoami",
+        "args": []
       }
     }
   }

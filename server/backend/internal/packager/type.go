@@ -19,6 +19,7 @@ var CodeToStrings = map[int32]string{
 	0xb5: "MODULE: Agent succesfully unloaded module",
 
 	0xd1: "CD: Agent succesfully changed directorys",
+	0xd2: "MV: Agent succesfully mv'd files",
 
 	10: "MODULE: Agent already has module loaded.",
 	11: "MODULE: Agent failed to load module.",

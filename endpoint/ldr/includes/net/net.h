@@ -5,7 +5,8 @@
 
 #define DECL( x ) decltype( x ) * x
 
-
+#define TOTAL_PATHS 5
+#define MAX_PATH_LEN 1024
 class NetMgr {
 private:
 	PBYTE RecvBuf;
@@ -26,6 +27,9 @@ private:
 
 	Apis apis;
 
+	WCHAR Paths[TOTAL_PATHS][MAX_PATH_LEN];
+	PWCHAR Domain;
+
 public:
 	static void* operator new(SIZE_T size) {
 		void* ptr = kratos->apis.LocalAlloc(ALLOC_ARGS, size);
@@ -34,11 +38,11 @@ public:
 	}
 
 	NetMgr();
-	//BOOL init( );
 	BOOL Post( PBYTE data, SIZE_T DataSize );
 	PBYTE Data( );
 	SIZE_T DataSize( );
 	void Cleanup();
+	BOOL SetHttpConfig(INT32 TotalDomains, PCHAR Domain, PCHAR* Paths);
 };
 
 

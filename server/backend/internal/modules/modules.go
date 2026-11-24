@@ -121,6 +121,7 @@ func Default() *Registry {
 				"ls": {
 					Code:  1,
 					Usage: "ls [path]",
+					ParseID: 102,
 					Args: []CommandArg{
 						{Name: "path", Type: "string", Default: "."},
 					},

@@ -94,6 +94,7 @@ public:
 		DECL(GetUserDefaultGeoName);
 		DECL(GetTickCount);
 		DECL(CreateFileA);
+		DECL(MultiByteToWideChar);
 
 
 		// ntdll
@@ -128,7 +129,6 @@ public:
 	Dlls dlls;
 	INT32 AgentID;
 	BOOL Register();
-	BOOL LoadConfig();
 	BOOL Init();
 	BOOL LoadApis();
 	BOOL Run();

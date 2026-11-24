@@ -171,10 +171,18 @@ func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules
 					break
 				}
 				o.Output = moduleRegistry.ParseModuleBits(r.unPack8())
-				o.Output, _ = p.Parse(parseID, r.r)
 
 			default:
-				o.Output = fmt.Sprintf("[!] Unknown parser id %d", parseID)
+				if p == nil {
+					o.Output = fmt.Sprintf("[!] Unknown parser id %d", parseID)
+					break
+				}
+				output, err := p.Parse(parseID, r.r)
+				if err != nil {
+					o.Output = fmt.Sprintf("[!] %v", err)
+					break
+				}
+				o.Output = output
 			}
 			fmt.Println(o.Output)
 			break

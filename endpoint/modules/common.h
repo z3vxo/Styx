@@ -27,8 +27,10 @@ typedef struct {
 
 
 #define CP_SUCCESS 0xd1
+#define MV_SUCCESS 0xd2
 
 #define CAT_ERROR_NOT_FILE 20
+#define ENV_ERROR 21
 
 #define OUTPUT_ERROR  0xc4
 #define OUTPUT_SUCCESS 0xc3

