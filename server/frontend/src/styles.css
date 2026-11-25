@@ -22,6 +22,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 .site-header { display: flex; align-items: center; justify-content: space-between; padding: 30px 40px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-size: 28px; font-weight: 600; letter-spacing: -1.2px; }
+.brand-mark { display: inline-flex; flex: none; width: 30px; height: 30px; color: var(--accent); }
+.brand-mark svg { width: 100%; height: 100%; stroke: none; }
 .brand span { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 700; font-size: 30px; line-height: 1; letter-spacing: -1.5px; }
 .header-note { font-size: 13px; color: var(--muted); }
 main { flex: 1; display: grid; place-items: center; padding: 48px 24px 90px; }
@@ -74,8 +76,10 @@ footer { padding: 24px 40px; display: flex; justify-content: space-between; gap:
 .campaign-create-form input { height: 42px; background: var(--surface); }
 .campaign-create-form p { margin: 10px 0 0; color: var(--error); font-size: 13px; }
 .campaign-path-heading { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; color: var(--text); font-size: 13px; font-weight: 500; }
+.campaign-path-actions { display: flex; gap: 6px; }
 .campaign-path-heading button { width: 34px; height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 20px; line-height: 1; }
-.campaign-path-heading button:hover { background: var(--ground); }
+.campaign-path-heading button:hover:not(:disabled) { background: var(--ground); }
+.campaign-path-heading button:disabled { opacity: .4; cursor: default; }
 .campaign-path-list { display: grid; gap: 8px; }
 .campaign-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .campaign-form-actions button { height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); font-size: 13px; }

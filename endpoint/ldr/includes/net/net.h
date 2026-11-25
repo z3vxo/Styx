@@ -17,6 +17,7 @@ private:
 		DECL( WinHttpOpen );
 		DECL( WinHttpConnect );
 		DECL( WinHttpReadData );
+		DECL( WinHttpSetOption );
 		DECL( WinHttpOpenRequest );
 		DECL( WinHttpSendRequest );
 		DECL( WinHttpCloseHandle );
@@ -26,9 +27,11 @@ private:
 	HMODULE WinHttpDll;
 
 	Apis apis;
-
+	BOOL isHttps;
+	INT32 TotalPaths;
 	WCHAR Paths[TOTAL_PATHS][MAX_PATH_LEN];
 	PWCHAR Domain;
+	INT32 Port;
 
 public:
 	static void* operator new(SIZE_T size) {
@@ -42,7 +45,7 @@ public:
 	PBYTE Data( );
 	SIZE_T DataSize( );
 	void Cleanup();
-	BOOL SetHttpConfig(INT32 TotalDomains, PCHAR Domain, PCHAR* Paths);
+	BOOL SetHttpConfig(INT32 TotalPaths, PCHAR Domain, INT32 Port, BOOL isHttps, PCHAR* Paths);
 };
 
 

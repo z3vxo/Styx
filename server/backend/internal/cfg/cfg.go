@@ -15,10 +15,12 @@ type Cfg struct {
 	AccessTTL  time.Duration
 	RefreshTTL time.Duration
 
-	Bind    string
-	Port    int
-	TlsKey  string
-	TlsCert string
+	Bind        string
+	Port        int
+	TlsKey      string
+	TlsCert     string
+	BackendHost string
+	BackendPort int
 }
 
 func Load() (*Cfg, error) {
@@ -32,14 +34,16 @@ func Load() (*Cfg, error) {
 		return nil, fmt.Errorf("read config %s: %w", path, err)
 	}
 	var file struct {
-		Access     string `json:"jwt_access_secret"`
-		Refresh    string `json:"jwt_refresh_secret"`
-		AccessTTL  string `json:"access_ttl"`
-		RefreshTTL string `json:"refresh_ttl"`
-		Bind       string `json:"bind_address"`
-		Port       int    `json:"port"`
-		TlsKey     string `json:"tls_key_path"`
-		TlsCert    string `json:"tls_cert_path"`
+		Access      string `json:"jwt_access_secret"`
+		Refresh     string `json:"jwt_refresh_secret"`
+		AccessTTL   string `json:"access_ttl"`
+		RefreshTTL  string `json:"refresh_ttl"`
+		Bind        string `json:"bind_address"`
+		Port        int    `json:"port"`
+		TlsKey      string `json:"tls_key_path"`
+		TlsCert     string `json:"tls_cert_path"`
+		BackendHost string `json:"backend_host"`
+		BackendPort int    `json:"backend_port"`
 	}
 	if err := json.Unmarshal(data, &file); err != nil {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)
@@ -61,5 +65,6 @@ func Load() (*Cfg, error) {
 		return nil, fmt.Errorf("invalid refresh_ttl %q", file.RefreshTTL)
 	}
 	return &Cfg{Access: access, Refresh: refresh, AccessTTL: accessTTL, RefreshTTL: refreshTTL,
-		Bind: file.Bind, Port: file.Port, TlsKey: file.TlsKey, TlsCert: file.TlsCert}, nil
+		Bind: file.Bind, Port: file.Port, TlsKey: file.TlsKey, TlsCert: file.TlsCert,
+		BackendHost: file.BackendHost, BackendPort: file.BackendPort}, nil
 }

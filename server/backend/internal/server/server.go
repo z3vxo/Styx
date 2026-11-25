@@ -6,6 +6,7 @@ import (
 	"styx/internal/agentsrv"
 	campaigns "styx/internal/api/Campaigns"
 	authapi "styx/internal/api/auth"
+	builder "styx/internal/api/builder"
 	clients "styx/internal/api/clients"
 	files "styx/internal/api/files"
 	tasks "styx/internal/api/tasks"
@@ -29,6 +30,7 @@ type Server struct {
 	UploadsAPI  *files.API
 	ClientsAPI  *clients.API
 	TasksAPI    *tasks.API
+	BuildAPI    *builder.API
 	Cfg         *cfg.Cfg
 	WSHandler   *ws.WS
 	AgentSrv    *agentsrv.Agent
@@ -69,6 +71,7 @@ func New() (*Server, error) {
 		TasksAPI:    tasks.New(db, a, m),
 		WSHandler:   w,
 		AgentSrv:    agentsrv.New(db, m, w, p),
+		BuildAPI:    builder.New(db, a, c.BackendHost, c.BackendPort),
 	}, nil
 }
 
@@ -81,6 +84,7 @@ func (s *Server) Run() error {
 		r.Mount("/uploads", s.UploadsAPI.Routes())
 		r.Mount("/clients", s.ClientsAPI.Routes())
 		r.Mount("/tasks", s.TasksAPI.Routes())
+		r.Mount("/builder", s.BuildAPI.Routes())
 		r.Get("/ws/connect", s.WSHandler.HandleWS)
 	})
 	r.HandleFunc("/*", s.AgentSrv.HandleAgentSrv)

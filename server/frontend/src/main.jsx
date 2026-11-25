@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import mark from './mark.svg';
+import { Logo } from './Logo.jsx';
 import 'country-flag-icons/3x2/flags.css';
 import './styles.css';
 import { Dashboard } from './Dashboard.jsx';
@@ -46,7 +46,7 @@ function Login() {
   }
   return (<>
 <header className="site-header">
-    <a className="brand" href="/login" aria-label="Styx home"><img src={mark} alt="" width="30" height="30" /><span>styx</span></a>
+    <a className="brand" href="/login" aria-label="Styx home"><Logo /><span>styx</span></a>
   </header>
   <main>
     <section className="login" aria-labelledby="login-title">
@@ -69,6 +69,7 @@ function Login() {
 
 const path = window.location.pathname;
 if (path === '/dashboard' || path === '/dashboard/') {
+  document.title = 'Styx';
   createRoot(document.getElementById('root')).render(<Dashboard />);
 } else if (path === '/login' || path === '/login/') {
   createRoot(document.getElementById('root')).render(<Login />);

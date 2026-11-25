@@ -214,7 +214,20 @@ func WriteBaseConfig(baseDir string, uid, gid int) error {
 		RefreshTTL       string `json:"refresh_ttl"`
 		TLSCertPath      string `json:"tls_cert_path"`
 		TLSKeyPath       string `json:"tls_key_path"`
-	}{"127.0.0.1", 8080, accessSecret, refreshSecret, "15m", "168h", "", ""}
+		BackendHost      string `json:"backend_host"`
+		BackendPort      int    `json:"backend_port"`
+	}{
+		BindAddress:      "127.0.0.1",
+		Port:             8080,
+		JWTAccessSecret:  accessSecret,
+		JWTRefreshSecret: refreshSecret,
+		AccessTTL:        "15m",
+		RefreshTTL:       "168h",
+		TLSCertPath:      "",
+		TLSKeyPath:       "",
+		BackendHost:      "",
+		BackendPort:      0,
+	}
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(config); err != nil {

@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mark from './mark.svg';
+import { Logo } from './Logo.jsx';
 import { CampaignProvider, useCampaign } from './CampaignContext.jsx';
 import { AgentSocketProvider, useAgentSocket } from './AgentSocketContext.jsx';
 import { FilesView } from './FilesView.jsx';
 import { split } from 'shlex';
 import { authFetch } from './authFetch.js';
 import { hasFlag } from 'country-flag-icons';
+
+const maxCampaignPaths = 5;
 
 const regionNames = (() => {
   try {
@@ -95,7 +97,13 @@ function CampaignPicker() {
     {creating && status === 'ready' && <form className="campaign-create-form" id="campaign-create-form" onSubmit={createCampaign}>
       <label htmlFor="campaign-name">New campaign</label>
       <input id="campaign-name" value={name} onChange={event => setName(event.target.value)} maxLength={120} autoFocus placeholder="Campaign name" required />
-      <div className="campaign-path-heading"><span>Paths</span><button type="button" aria-label="Add path" title="Add path" onClick={() => setPaths(current => [...current, ''])}>+</button></div>
+      <div className="campaign-path-heading">
+        <span>Paths</span>
+        <div className="campaign-path-actions">
+          <button type="button" aria-label="Remove last path" title="Remove last path" disabled={paths.length === 1} onClick={() => setPaths(current => current.slice(0, -1))}>−</button>
+          <button type="button" aria-label="Add path" title="Add path" disabled={paths.length === maxCampaignPaths} onClick={() => setPaths(current => current.length < maxCampaignPaths ? [...current, ''] : current)}>+</button>
+        </div>
+      </div>
       <div className="campaign-path-list">{paths.map((path, index) => <input key={index} aria-label={`Path ${index + 1}`} value={path} onChange={event => setPaths(current => current.map((entry, i) => i === index ? event.target.value : entry))} placeholder="/whatever" pattern="/.*" title="Enter a path starting with /" required />)}</div>
       {createError && <p role="alert">{createError}</p>}
       <div className="campaign-form-actions"><button type="button" onClick={() => setCreating(false)}>Cancel</button><button type="submit" disabled={saving || !name.trim() || paths.some(path => !path.trim().startsWith('/'))}>{saving ? 'Creating…' : 'Create'}</button></div>
@@ -392,7 +400,7 @@ export function Dashboard() {
     <AgentSocketProvider>
       <div className="dashboard-shell">
         <header className="dashboard-topbar">
-          <a className="brand" href="/dashboard" aria-label="Styx home"><img src={mark} alt="" width="30" height="30" /><span>styx</span></a>
+          <a className="brand" href="/dashboard" aria-label="Styx home"><Logo /><span>styx</span></a>
           <nav className="top-nav" aria-label="Main navigation">
             <button className="nav-item" type="button" onClick={() => setView('dashboard')} aria-current={view === 'dashboard' ? 'page' : undefined}>Dashboard</button>
             <button className="nav-item" type="button" onClick={() => setView('campaigns')} aria-current={view === 'campaigns' ? 'page' : undefined}>Campaigns</button>

@@ -75,6 +75,7 @@ private:
 	void runModuleCmd( );
 	void exitAgent( );
 	void Cleanup( );
+	void Sleeper( );
 
 public:
 	struct Apis {
@@ -95,6 +96,7 @@ public:
 		DECL(GetTickCount);
 		DECL(CreateFileA);
 		DECL(MultiByteToWideChar);
+		DECL(WaitForSingleObject);
 
 
 		// ntdll

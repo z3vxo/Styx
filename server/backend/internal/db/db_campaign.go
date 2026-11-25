@@ -146,3 +146,22 @@ func (db *DB) GetCampaignIdFromPath(path string) (string, error) {
 	return uuid, err
 
 }
+
+func (db *DB) GetPaths(campaingID string) ([]string, error) {
+	q := `SELECT Path FROM campaign_paths WHERE uuid = ?`
+	rows, err := db.conn.Query(q, campaingID)
+	if err != nil {
+		return nil, err
+	}
+
+	paths := []string{}
+
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		paths = append(paths, p)
+	}
+	return paths, rows.Err()
+}
