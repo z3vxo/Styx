@@ -15,6 +15,7 @@ BOOL Kratos::Run( ) {
 	const INT32 RequestBase = packager->PackerSize( );
 
 	for ( ;; ) {
+		DEBUG_LOG("\n");
 		this->Sleeper();
 		if ( ! packager->ResetPackerIndex( RequestBase ) ) {
 			return FALSE;

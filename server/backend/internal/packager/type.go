@@ -1,10 +1,13 @@
 package packager
 
 const (
-	OUTPUT_NO_PARSE    = 0xc1
-	OUTPUT_NEEDS_PARSE = 0xc2
-	OUTPUT_SUCCESS     = 0xc3
-	OUTPUT_ERROR       = 0xc4
+	OUTPUT_NO_PARSE       = 0xc1
+	OUTPUT_NEEDS_PARSE    = 0xc2
+	OUTPUT_SUCCESS        = 0xc3
+	OUTPUT_ERROR          = 0xc4
+	OUTPUT_MODULE_SUCCESS = 0xc5
+	OUTPUT_MODULE_ERROR   = 0xc6
+	OUTPUT_WIN32_ERROR    = 0xc7
 
 	END_SIG = 0xFFFFFFFF
 
@@ -13,17 +16,3 @@ const (
 	EXIT_PROCESS = 0xf1
 	EXIT_THREAD  = 0xf2
 )
-
-var CodeToStrings = map[int32]string{
-	0xb1: "MODULE: Agent succesfully loaded module",
-	0xb5: "MODULE: Agent succesfully unloaded module",
-
-	0xd1: "CD: Agent succesfully changed directorys",
-	0xd2: "MV: Agent succesfully mv'd files",
-
-	10: "MODULE: Agent already has module loaded.",
-	11: "MODULE: Agent failed to load module.",
-	12: "MODULE: Agent does not have module loaded.",
-	13: "MODULE: Agent failed to unload module.",
-	20: "CAT: Provided path is not a file.",
-}

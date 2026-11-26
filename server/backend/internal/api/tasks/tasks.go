@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	authmgr "styx/internal/auth"
 	"styx/internal/db"
@@ -46,7 +47,7 @@ func (a *API) NewTask(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Kind == "help" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"help": "help, load-module <name>, unload-module <name>, list-modules, run-command <module> <command> [args], exit <thread|process>"})
+		json.NewEncoder(w).Encode(map[string]string{"help": "help, load-module <name>, unload-module <name>, list-modules, run-command <module> <command> [args], reconfig <sleep> <jitter>, exit <thread|process>"})
 		return
 	}
 
@@ -85,6 +86,23 @@ func (a *API) resolve(req *db.NewTaskReq) error {
 			return fmt.Errorf("list-modules takes no arguments")
 		}
 		req.Kind = "list-modules"
+	case "reconfig":
+		if len(req.Args) != 2 {
+			return fmt.Errorf("reconfig requires sleep and jitter")
+		}
+		sleep, ok := intArg(req.Args, 0)
+		if !ok {
+			return fmt.Errorf("reconfig sleep must be an int32")
+		}
+		jitter, ok := intArg(req.Args, 1)
+		if !ok {
+			return fmt.Errorf("reconfig jitter must be an int32")
+		}
+		req.Kind = "reconfig"
+		req.Args = []db.Arg{
+			{Type: "int32", Value: sleep},
+			{Type: "int32", Value: jitter},
+		}
 	case "exit":
 		if len(req.Args) != 1 {
 			return fmt.Errorf("exit requires exactly one argument: thread or process")
@@ -167,6 +185,28 @@ func stringArg(args []db.Arg, index int) (string, bool) {
 		return "", false
 	}
 	return value, true
+}
+
+func intArg(args []db.Arg, index int) (int32, bool) {
+	if index < 0 || index >= len(args) {
+		return 0, false
+	}
+	value, ok := parseInt64(args[index].Value)
+	if !ok {
+		text, isString := args[index].Value.(string)
+		if !isString {
+			return 0, false
+		}
+		parsed, err := strconv.ParseInt(text, 10, 32)
+		if err != nil {
+			return 0, false
+		}
+		return int32(parsed), true
+	}
+	if value < -1<<31 || value > 1<<31-1 {
+		return 0, false
+	}
+	return int32(value), true
 }
 
 func validateArgs(args []db.Arg, schema []modules.CommandArg) ([]db.Arg, error) {

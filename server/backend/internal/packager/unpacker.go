@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 	"styx/internal/modules"
+	"styx/internal/outputcodes"
 	"styx/internal/parsers"
 )
 
@@ -115,8 +116,7 @@ func ParseRegister(body *bytes.Reader) (AgentRegister, error) {
 	return Agent, r.err
 }
 
-// trimString removes the trailing NUL that PackWideBytes includes when it
-// encodes a wide string for registration.
+
 func trimString(value []byte) string {
 	return strings.TrimRight(string(value), "\x00")
 }
@@ -133,7 +133,7 @@ type Output struct {
 	TotalSize int64         `json:"total_size"`
 }
 
-func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules.Registry, p *parsers.Parser) (Output, error) {
+func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules.Registry, p *parsers.Parser, codes *outputcodes.Table) (Output, error) {
 
 	r := &Reader{r: body}
 
@@ -151,7 +151,30 @@ func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules
 
 		case OUTPUT_ERROR, OUTPUT_SUCCESS:
 			errorCode := r.unPack4()
-			o.Output = CodeToStrings[errorCode]
+			if codes != nil {
+				o.Output, _ = codes.Message(outputcodes.NamespaceCore, errorCode)
+			}
+			fmt.Println(o.Output)
+			break
+
+		case OUTPUT_MODULE_ERROR, OUTPUT_MODULE_SUCCESS:
+			errorCode := r.unPack4()
+			if codes != nil {
+				o.Output, _ = codes.Message(outputcodes.NamespaceModule, errorCode)
+			}
+			fmt.Println(o.Output)
+			break
+
+		case OUTPUT_WIN32_ERROR:
+			errorCode := r.unPack4()
+			if codes != nil {
+				message, ok := codes.Message(outputcodes.NamespaceWin32, errorCode)
+				if ok {
+					o.Output = message
+				} else {
+					o.Output = fmt.Sprintf("Win32 error %d (0x%X)", errorCode, uint32(errorCode))
+				}
+			}
 			fmt.Println(o.Output)
 			break
 
@@ -184,7 +207,6 @@ func ParseAgentOutput(body *bytes.Reader, agentID int32, moduleRegistry *modules
 				}
 				o.Output = output
 			}
-			fmt.Println(o.Output)
 			break
 
 		}

@@ -87,3 +87,44 @@ func (db *DB) InsertAgent(info packager.AgentRegister, campaignID string) (Clien
 	client.IsAdmin = isAdmin != 0
 	return cleanClient(client), nil
 }
+
+
+// `CREATE TABLE IF NOT EXISTS clients(
+// 		id           INTEGER PRIMARY KEY AUTOINCREMENT,
+// 		ClientName   TEXT NOT NULL,
+// 		ClientID     INTEGER NOT NULL,
+// 		IsAdmin      INTEGER NOT NULL,
+// 		Pid          INTEGER NOT NULL,
+// 		PPid         INTEGER NOT NULL,
+// 		CampaignUUID TEXT NOT NULL,
+// 		Hostname     TEXT NOT NULL DEFAULT '',
+// 		Username     TEXT NOT NULL DEFAULT '',
+// 		Domain       TEXT NOT NULL DEFAULT '',
+// 		Country      TEXT NOT NULL DEFAULT '',
+// 		Arch         TEXT NOT NULL DEFAULT '',
+// 		created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+// 		FOREIGN KEY(CampaignUUID) REFERENCES campaigns(uuid) ON DELETE CASCADE
+// 	);`,
+
+
+type ClientInfo struct {
+	ClientName string `json:"client_name"`
+	Username   string `json:"username"`
+	Hostname   string `json:"hostname"`
+	Domain     string `json:"domain"`
+	Country    string `json:"country"`
+	Arch       string `json:"arch"`
+
+	Pid        int `json:"pid"`
+	PPid       int `json:"ppid"`
+	IsAdmin    int `json:"is_admin"`
+}
+
+func (db *DB) GetClientInfo(id int32) (ClientInfo, error) {
+	q := `SELECT ClientName, Username, Hostname, Domain, Country, Arch, Pid, PPid, IsAdmin FROM clients WHERE ClientID = ?`
+
+	var info ClientInfo
+	err := db.conn.QueryRow(q, id).Scan(&info.ClientName, &info.Username, &info.Hostname, &info.Domain, &info.Country, &info.Arch, &info.Pid, &info.PPid, &info.IsAdmin)
+	return info, err
+
+}

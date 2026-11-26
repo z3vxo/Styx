@@ -26,17 +26,17 @@ typedef struct {
 #define END_SIG 0xFFFFFFFF
 
 
-#define CP_SUCCESS 0xd1
-#define MV_SUCCESS 0xd2
-
-#define CAT_ERROR_NOT_FILE 20
-#define ENV_ERROR 21
-
-#define OUTPUT_ERROR  0xc4
-#define OUTPUT_SUCCESS 0xc3
-#define OUTPUT_NEEDS_PARSE 0xc2
 #define OUTPUT_NO_PARSE    0xc1
-#define PARSER_LS 102
+#define OUTPUT_NEEDS_PARSE 0xc2
+#define OUTPUT_SUCCESS     0xc3
+#define OUTPUT_ERROR       0xc4
+#define OUTPUT_MODULE_SUCCESS 0xc5
+#define OUTPUT_MODULE_ERROR   0xc6
+#define OUTPUT_WIN32_ERROR    0xc7
+
+
+
+
 
 constexpr DWORD HasherA(PCHAR str) {
 	UINT32 hash = 5381;

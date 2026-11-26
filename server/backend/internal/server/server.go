@@ -14,6 +14,7 @@ import (
 	"styx/internal/cfg"
 	"styx/internal/db"
 	"styx/internal/modules"
+	"styx/internal/outputcodes"
 	"styx/internal/parsers"
 	"styx/internal/web"
 	"styx/internal/ws"
@@ -56,6 +57,10 @@ func New() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	codes, err := outputcodes.Load()
+	if err != nil {
+		return nil, err
+	}
 
 	w := ws.New(a)
 
@@ -70,7 +75,7 @@ func New() (*Server, error) {
 		ClientsAPI:  clients.New(db, a),
 		TasksAPI:    tasks.New(db, a, m),
 		WSHandler:   w,
-		AgentSrv:    agentsrv.New(db, m, w, p),
+		AgentSrv:    agentsrv.New(db, m, w, p, codes),
 		BuildAPI:    builder.New(db, a, c.BackendHost, c.BackendPort),
 	}, nil
 }

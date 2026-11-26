@@ -83,8 +83,7 @@ func (mod *Registry) ResolveCommand(name string) (string, Modules, uint32, bool)
 	return "", Modules{}, 0, false
 }
 
-// ParseModuleBits renders the agent's loaded-module bitmap as one line per
-// registered module. Bit N is set when module ID N is loaded.
+
 func (mod *Registry) ParseModuleBits(bits int64) string {
 	names := make([]string, 0, len(mod.Modules))
 	for name := range mod.Modules {
@@ -119,8 +118,8 @@ func Default() *Registry {
 			Description: "Local filesystem operations",
 			Commands: map[string]Command{
 				"ls": {
-					Code:  1,
-					Usage: "ls [path]",
+					Code:    1,
+					Usage:   "ls [path]",
 					ParseID: 102,
 					Args: []CommandArg{
 						{Name: "path", Type: "string", Default: "."},

@@ -36,6 +36,10 @@ BOOL Kratos::Dispatch( INT32 TotalTasks ) {
 				DEBUG_LOG("[+] Task = EXIT_AGENT");
 				this->exitAgent( );
 				break;
+			case TASK_RECONFIG:
+				DEBUG_LOG("[+] Task = RECONFIG");
+				this->Reconfig();
+				break;
 
 		}
 	}

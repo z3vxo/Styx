@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "core": {
+    "177": "MODULE: Agent successfully loaded module",
+    "180": "CONFIG: Agent successfully updated sleep and jitter",
+    "181": "MODULE: Agent successfully unloaded module",
+    "10": "MODULE: Agent already has module loaded.",
+    "11": "MODULE: Agent failed to load module.",
+    "12": "MODULE: Agent does not have module loaded.",
+    "13": "MODULE: Agent failed to unload module."
+  },
+  "win32": {
+    "2": "The system cannot find the file specified.",
+    "3": "The system cannot find the path specified.",
+    "5": "Access is denied.",
+    "32": "The process cannot access the file because it is being used by another process.",
+    "87": "The parameter is incorrect."
+  },
+  "modules": {
+    "file-system": {
+      "range": "200-299",
+      "codes": {
+        "200": "CD: Agent successfully changed directories",
+        "201": "MV: Agent successfully moved files",
+        "250": "CAT: Provided path is not a file."
+      }
+    },
+    "enum": {
+      "range": "300-399",
+      "codes": {
+        "350": "ENV: Failed to read environment"
+      }
+    }
+  }
+}

@@ -196,6 +196,22 @@ function formatAgentOutput(output) {
   return lines.join('\n').trimEnd();
 }
 
+function formatClientInfo(info) {
+  const text = value => value == null || value === '' ? '—' : String(value);
+  const admin = info?.is_admin === true || info?.is_admin === 1;
+  return [
+    `Codename: ${text(info?.client_name)}`,
+    `Username: ${text(info?.username)}`,
+    `Hostname: ${text(info?.hostname)}`,
+    `Domain:   ${text(info?.domain)}`,
+    `Country:  ${text(info?.country)}`,
+    `Arch:     ${text(info?.arch)}`,
+    `PID:      ${text(info?.pid)}`,
+    `PPID:     ${text(info?.ppid)}`,
+    `Admin:    ${admin ? 'yes' : 'no'}`,
+  ].join('\n');
+}
+
 function ShellPanel({ shell, onClose }) {
   const { currentCampaignId } = useCampaign();
   const { outputsByAgent } = useAgentSocket();
@@ -246,6 +262,31 @@ function ShellPanel({ shell, onClose }) {
     const [cmd, ...args] = tokens;
     if (!cmd) {
       setEntries(previous => [...previous, { id: entryId, command: value, response: 'Enter a command.' }]);
+      return;
+    }
+    if (cmd.toLowerCase() === 'info') {
+      const infoController = new AbortController();
+      taskRequestsRef.current.add(infoController);
+      setEntries(previous => [...previous, { id: entryId, command: value, response: 'Loading client info…' }]);
+      setCommand('');
+      let result;
+      try {
+        if (args.length > 0) throw new Error('info takes no arguments.');
+        const response = await authFetch(`/rest/clients/info/${encodeURIComponent(client.client_id)}`, {
+          signal: AbortSignal.any([infoController.signal, AbortSignal.timeout(15000)]),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(data?.error || 'Could not load client info.');
+        result = formatClientInfo(data);
+      } catch (error) {
+        result = error instanceof Error && error.name !== 'TimeoutError' && error.name !== 'AbortError'
+          ? error.message : 'Could not load client info. Please try again.';
+      } finally {
+        taskRequestsRef.current.delete(infoController);
+      }
+      if (!infoController.signal.aborted) {
+        setEntries(previous => previous.map(entry => entry.id === entryId ? { ...entry, response: result } : entry));
+      }
       return;
     }
     const controller = new AbortController();

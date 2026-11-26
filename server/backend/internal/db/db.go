@@ -19,7 +19,7 @@ const tasksSchema = `CREATE TABLE IF NOT EXISTS tasks(
 	  ClientID    INTEGER NOT NULL,
 	  CampaignID  TEXT NOT NULL,
 	  Kind        TEXT NOT NULL CHECK (Kind IN
-	               ('load-module','unload-module','list-modules','run-command','exit-agent')),
+	               ('load-module','unload-module','list-modules','run-command','exit-agent','reconfig')),
 	  Module      TEXT,
 	  ModuleID    INTEGER,
 	  Command     TEXT,
@@ -205,7 +205,7 @@ func migrateTasks(conn *sql.DB) error {
 		}
 		return err
 	}
-	if legacy || !schema.Valid || !strings.Contains(schema.String, "exit-agent") {
+	if legacy || !schema.Valid || !strings.Contains(schema.String, "exit-agent") || !strings.Contains(schema.String, "reconfig") {
 		if _, err := conn.Exec(`DROP TABLE tasks`); err != nil {
 			return err
 		}

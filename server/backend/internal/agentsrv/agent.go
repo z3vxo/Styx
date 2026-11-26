@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"styx/internal/db"
 	"styx/internal/modules"
+	"styx/internal/outputcodes"
 	"styx/internal/packager"
 	"styx/internal/parsers"
 	"styx/internal/ws"
@@ -17,10 +18,11 @@ type Agent struct {
 	modules *modules.Registry
 	Ws      *ws.WS
 	Parser  *parsers.Parser
+	Codes   *outputcodes.Table
 }
 
-func New(db *db.DB, modules *modules.Registry, w *ws.WS, p *parsers.Parser) *Agent {
-	return &Agent{db: db, modules: modules, Ws: w, Parser: p}
+func New(db *db.DB, modules *modules.Registry, w *ws.WS, p *parsers.Parser, codes *outputcodes.Table) *Agent {
+	return &Agent{db: db, modules: modules, Ws: w, Parser: p, Codes: codes}
 }
 
 // NewAgent is the payload broadcast to dashboard tabs when an agent registers.
@@ -136,7 +138,7 @@ func (agent *Agent) HandleAgentSrv(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case MSG_OUTPUT:
-		data, err := packager.ParseAgentOutput(reader, AgentID, agent.modules, agent.Parser)
+		data, err := packager.ParseAgentOutput(reader, AgentID, agent.modules, agent.Parser, agent.Codes)
 		if err != nil {
 			agent.Ws.SendWsMessage(ErrorMsg{Msg: "[!] Server Failed too Parse output"}, ws.ErrorMsg)
 			w.WriteHeader(http.StatusOK)

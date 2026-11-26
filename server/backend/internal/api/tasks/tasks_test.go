@@ -140,3 +140,31 @@ func TestResolveExitAgent(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveReconfig(t *testing.T) {
+	api := &API{modules: modules.Default()}
+
+	req := db.NewTaskReq{Cmd: "reconfig", Args: []db.Arg{
+		{Type: "int32", Value: int32(10)},
+		{Type: "string", Value: "20"},
+	}}
+	if err := api.resolve(&req); err != nil {
+		t.Fatal(err)
+	}
+	if req.Kind != "reconfig" || len(req.Args) != 2 || req.Args[0].Value != int32(10) || req.Args[1].Value != int32(20) {
+		t.Fatalf("reconfig = %+v", req)
+	}
+
+	for _, args := range [][]db.Arg{
+		nil,
+		{{Type: "int32", Value: int32(10)}},
+		{{Type: "int32", Value: int32(10)}, {Type: "int32", Value: int32(20)}, {Type: "int32", Value: int32(30)}},
+		{{Type: "int32", Value: int32(10)}, {Type: "string", Value: "nope"}},
+		{{Type: "int32", Value: int64(1) << 40}, {Type: "int32", Value: int32(1)}},
+	} {
+		req := db.NewTaskReq{Cmd: "reconfig", Args: args}
+		if err := api.resolve(&req); err == nil {
+			t.Fatalf("reconfig accepted invalid args %+v", args)
+		}
+	}
+}

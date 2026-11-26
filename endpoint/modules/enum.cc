@@ -6,6 +6,9 @@
 #define PARSE_ENV 201
 #define PARSE_WHOAMI 202
 
+
+#define ENV_ERROR 350
+
 #define NTAPI_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 
 
@@ -30,8 +33,8 @@ SEC_B void do_env(PModule mod) {
 	LPCH envBlock = fnGetEnvironmentStrings();
 	LPCH p = envBlock;
 	if(!envBlock) {
-		mod->ModulePack4(OUTPUT_ERROR);
-		mod->ModulePack4(ENV_ERROR);
+		mod->ModulePack4( OUTPUT_MODULE_ERROR );
+		mod->ModulePack4( ENV_ERROR );
 		goto CLEANUP;
 	}
 
@@ -80,7 +83,7 @@ SEC_B void do_whoami(PModule mod) {
 
 	stat = fnNtOpenToken( CURRENT_PROCESS, TOKEN_QUERY, &hToken );
 	if( ! NTAPI_SUCCESS( stat ) ) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnRtlNtStatusToDosError( stat ) );
 		return;
 	}
@@ -92,7 +95,7 @@ SEC_B void do_whoami(PModule mod) {
 	if( ! NTAPI_SUCCESS( stat ) ) {
 		mod->ModuleFreeMem(pTokenUser);
 		fnCloseHandle( hToken );
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnRtlNtStatusToDosError( stat ) );
 		return;
 	}
@@ -101,7 +104,7 @@ SEC_B void do_whoami(PModule mod) {
 	pLookupAccountSidA fnLookupAccountSidA = (pLookupAccountSidA)mod->ModuleGetProcAddress(advapi, HASH_STRA( "LookupAccountSidA" ) );
 	pLookupPrivilegeNameA fnLookupPrivilegeNameA = (pLookupPrivilegeNameA)mod->ModuleGetProcAddress(advapi, HASH_STRA( "LookupPrivilegeNameA" ) );
 	if( ! fnConvertSidToStringSidA( pTokenUser->User.Sid, &SidString ) ) {
-		mod->ModulePack4(OUTPUT_ERROR);
+		mod->ModulePack4(OUTPUT_WIN32_ERROR);
 		mod->ModulePack4( ( INT32 )fnGetLastError( ) );
 		mod->ModuleFreeMem( pTokenUser );
 		fnCloseHandle( hToken );
@@ -109,7 +112,7 @@ SEC_B void do_whoami(PModule mod) {
 	}
 
 	if( ! fnLookupAccountSidA( NULL, pTokenUser->User.Sid, NameBuf, &NameLen, DomainBuf, &DomainLen, &sidType ) ) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ) );
 		mod->ModuleFreeMem( pTokenUser );
 		mod->ModuleFreeMem( SidString );
@@ -126,7 +129,8 @@ SEC_B void do_whoami(PModule mod) {
 		mod->ModuleFreeMem(pTokenPrivs);
 		mod->ModuleFreeMem(SidString);
 		fnCloseHandle( hToken );
-		mod->ModulePack4( OUTPUT_ERROR );
+		
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnRtlNtStatusToDosError( stat ) );
 		return;
 	}

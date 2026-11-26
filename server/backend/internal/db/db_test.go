@@ -283,6 +283,12 @@ func TestSetupMigratesTasksForExitAgent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("insert exit-agent after migration: %v", err)
 	}
+	if _, err := (&DB{conn: conn}).InsertTask(NewTaskReq{
+		Cmd: "reconfig", ClientID: 1, CampaignID: "campaign-a", Kind: "reconfig",
+		Args: []Arg{{Type: "int32", Value: int32(5)}, {Type: "int32", Value: int32(10)}},
+	}); err != nil {
+		t.Fatalf("insert reconfig after migration: %v", err)
+	}
 }
 
 func TestListClientsIncludesProfileFields(t *testing.T) {

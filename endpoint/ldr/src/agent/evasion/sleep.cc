@@ -5,5 +5,5 @@
 void Kratos::Sleeper() {
 	DEBUG_LOG("[*] Sleeping");
 
-	Sleep(5000);
+	Sleep(this->settings.Sleep * 1000);
 }
